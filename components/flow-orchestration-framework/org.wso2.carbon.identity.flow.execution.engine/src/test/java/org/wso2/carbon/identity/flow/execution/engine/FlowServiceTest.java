@@ -57,6 +57,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.wso2.carbon.identity.flow.execution.engine.Constants.OTFI;
 import static org.wso2.carbon.identity.flow.mgt.Constants.NodeTypes.DECISION;
 import static org.wso2.carbon.identity.flow.mgt.Constants.NodeTypes.PROMPT_ONLY;
 import static org.wso2.carbon.identity.flow.mgt.Constants.NodeTypes.TASK_EXECUTION;
@@ -196,6 +197,78 @@ public class FlowServiceTest {
                             .executeFlow(TENANT_DOMAIN, TEST_APPLICATION_ID, null, null,
                                     FLOW_TYPE, userInputMap);
             assertEquals(returnedStep, expectedStep);
+        }
+    }
+
+    @Test
+    public void testInitiateFlowCachesContextForOtfi() throws Exception {
+
+        Map<String, String> additionalData = new HashMap<>();
+        additionalData.put(OTFI, "sample-token");
+        FlowExecutionStep expectedStep = new FlowExecutionStep.Builder()
+                .flowId(testFlowContext.getContextIdentifier())
+                .flowStatus("INCOMPLETE")
+                .stepType("VIEW")
+                .data(new DataDTO.Builder().components(new ArrayList<>())
+                        .additionalData(additionalData).build())
+                .build();
+
+        try (MockedStatic<FlowExecutionEngineUtils> utilsMockedStatic = mockStatic(
+                FlowExecutionEngineUtils.class);
+             MockedStatic<FlowExecutionEngine> engineMockedStatic = mockStatic(FlowExecutionEngine.class)) {
+
+            utilsMockedStatic.when(
+                            () -> FlowExecutionEngineUtils.initiateContext(anyString(), anyString(), anyString()))
+                    .thenReturn(testFlowContext);
+            utilsMockedStatic.when(() -> FlowExecutionEngineUtils.buildOtfiCacheKey("sample-token"))
+                    .thenCallRealMethod();
+
+            engineMockedStatic.when(FlowExecutionEngine::getInstance).thenReturn(engineMock);
+            when(engineMock.execute(testFlowContext)).thenReturn(expectedStep);
+
+            FlowExecutionService.getInstance().executeFlow(TENANT_DOMAIN, TEST_APPLICATION_ID,
+                    null, null, FLOW_TYPE, null);
+
+            utilsMockedStatic.verify(() -> FlowExecutionEngineUtils.addFlowContextToCache(
+                    "OTFI-sample-token", testFlowContext));
+            utilsMockedStatic.verify(() -> FlowExecutionEngineUtils.addFlowContextToCache(testFlowContext));
+        }
+    }
+
+    @Test
+    public void testContinueFlowUsingOtfi() throws Exception {
+
+        FlowExecutionContext otfiContext = initTestContext();
+        Map<String, String> userInputs = new HashMap<>();
+        userInputs.put(OTFI, "token123");
+
+        FlowExecutionStep expectedStep = new FlowExecutionStep.Builder()
+                .flowId(otfiContext.getContextIdentifier())
+                .flowStatus("INCOMPLETE")
+                .stepType("VIEW")
+                .data(new DataDTO.Builder().components(new ArrayList<>()).url(StringUtils.EMPTY).build())
+                .build();
+
+        try (MockedStatic<FlowExecutionEngineUtils> utilsMockedStatic = mockStatic(
+                FlowExecutionEngineUtils.class);
+             MockedStatic<FlowExecutionEngine> engineMockedStatic = mockStatic(FlowExecutionEngine.class)) {
+
+            utilsMockedStatic.when(() -> FlowExecutionEngineUtils.buildOtfiCacheKey("token123"))
+                    .thenCallRealMethod();
+            String otfiCacheKey = FlowExecutionEngineUtils.buildOtfiCacheKey("token123");
+
+            utilsMockedStatic.when(() -> FlowExecutionEngineUtils.retrieveFlowContextFromCache(otfiCacheKey))
+                    .thenReturn(otfiContext);
+
+            engineMockedStatic.when(FlowExecutionEngine::getInstance).thenReturn(engineMock);
+            when(engineMock.execute(otfiContext)).thenReturn(expectedStep);
+
+            FlowExecutionStep result = FlowExecutionService.getInstance().executeFlow(TENANT_DOMAIN,
+                    TEST_APPLICATION_ID, null, null, FLOW_TYPE, userInputs);
+
+            assertEquals(result, expectedStep);
+            utilsMockedStatic.verify(() -> FlowExecutionEngineUtils.removeFlowContextFromCache(otfiCacheKey));
+            utilsMockedStatic.verify(() -> FlowExecutionEngineUtils.addFlowContextToCache(otfiContext));
         }
     }
 

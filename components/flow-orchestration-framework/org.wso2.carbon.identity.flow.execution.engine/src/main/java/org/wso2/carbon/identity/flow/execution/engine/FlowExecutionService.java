@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.flow.mgt.model.DataDTO;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.wso2.carbon.identity.flow.execution.engine.Constants.OTFI;
 import static org.wso2.carbon.identity.flow.execution.engine.Constants.STATUS_COMPLETE;
 import static org.wso2.carbon.identity.flow.mgt.Constants.FlowTypes.REGISTRATION;
 import static org.wso2.carbon.identity.flow.mgt.Constants.StepTypes.REDIRECTION;
@@ -79,9 +80,18 @@ public class FlowExecutionService {
         FlowExecutionContext context = null;
         boolean isFlowEnteredInIdentityContext = false;
         try {
+            String otfiCacheKey = null;
             if (StringUtils.isBlank(flowId)) {
-                // No flowId present hence initiate the flow.
-                context = FlowExecutionEngineUtils.initiateContext(tenantDomain, applicationId, flowType);
+                otfiCacheKey = resolveOtfiCacheKey(inputs);
+                if (StringUtils.isNotBlank(otfiCacheKey)) {
+                    context = FlowExecutionEngineUtils.retrieveFlowContextFromCache(otfiCacheKey);
+                    FlowExecutionEngineUtils.removeFlowContextFromCache(otfiCacheKey);
+                    flowId = context.getContextIdentifier();
+                } else {
+                    // No flowId present hence initiate the flow.
+                    context = FlowExecutionEngineUtils.initiateContext(tenantDomain, applicationId, flowType);
+                    flowId = context.getContextIdentifier();
+                }
             } else {
                 context = FlowExecutionEngineUtils.retrieveFlowContextFromCache(flowId);
             }
@@ -118,6 +128,7 @@ public class FlowExecutionService {
                             AuthenticationAssertionUtils.getSignedUserAssertion(context));
                 }
             } else {
+                cacheContextForOtfi(context, step);
                 FlowExecutionEngineUtils.addFlowContextToCache(context);
             }
             step.setFlowType(context.getFlowType());
@@ -171,5 +182,35 @@ public class FlowExecutionService {
             default:
                 return false;
         }
+    }
+
+    private String resolveOtfiCacheKey(Map<String, String> inputs) {
+
+        if (inputs == null || inputs.isEmpty()) {
+            return null;
+        }
+        String otfiToken = inputs.get(OTFI);
+        if (StringUtils.isBlank(otfiToken)) {
+            return null;
+        }
+        return FlowExecutionEngineUtils.buildOtfiCacheKey(otfiToken);
+    }
+
+    private void cacheContextForOtfi(FlowExecutionContext context, FlowExecutionStep step)
+            throws FlowEngineException {
+
+        if (context == null || step == null || step.getData() == null
+                || step.getData().getAdditionalData() == null) {
+            return;
+        }
+        String otfiToken = step.getData().getAdditionalData().get(OTFI);
+        if (StringUtils.isBlank(otfiToken)) {
+            return;
+        }
+        String cacheKey = FlowExecutionEngineUtils.buildOtfiCacheKey(otfiToken);
+        if (StringUtils.isBlank(cacheKey)) {
+            return;
+        }
+        FlowExecutionEngineUtils.addFlowContextToCache(cacheKey, context);
     }
 }
