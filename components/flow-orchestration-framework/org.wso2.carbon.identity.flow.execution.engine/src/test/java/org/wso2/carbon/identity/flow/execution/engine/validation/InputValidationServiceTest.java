@@ -155,11 +155,15 @@ public class InputValidationServiceTest {
         FlowExecutionContext.setGraphConfig(defaultGraph);
         DataDTO dataDTO = new DataDTO.Builder()
                 .requiredParams(Collections.singletonList("input1"))
+                .optionalParams(Collections.singletonList("input2"))
                 .build();
         inputValidationService.prepareStepInputs(dataDTO, FlowExecutionContext);
         Assert.assertEquals(FlowExecutionContext.getCurrentStepInputs().size(), 1);
-        Assert.assertEquals(FlowExecutionContext.getCurrentStepInputs().get(DEFAULT_ACTION).size(), 1);
+        Assert.assertEquals(FlowExecutionContext.getCurrentStepInputs().get(DEFAULT_ACTION).size(), 2);
         Assert.assertTrue(FlowExecutionContext.getCurrentStepInputs().get(DEFAULT_ACTION).contains("input1"));
+        Assert.assertTrue(FlowExecutionContext.getCurrentStepInputs().get(DEFAULT_ACTION).contains("input2"));
+        Assert.assertEquals(FlowExecutionContext.getCurrentOptionalInputs().get(DEFAULT_ACTION).size(), 1);
+        Assert.assertTrue(FlowExecutionContext.getCurrentOptionalInputs().get(DEFAULT_ACTION).contains("input2"));
     }
 
     @Test
@@ -177,6 +181,28 @@ public class InputValidationServiceTest {
         Assert.assertEquals(FlowExecutionContext.getFlowUser().getClaims().get(CLAIM_URI_PREFIX + "input1"),
                 "value1");
         Assert.assertEquals(FlowExecutionContext.getUserInputData().get("input2"), "value2");
+    }
+
+    @Test
+    public void testOptionalInputsAllowed() throws FlowEngineException {
+
+        FlowExecutionContext = initiateFlowContext();
+        FlowExecutionContext.setGraphConfig(defaultGraph);
+        DataDTO dataDTO = new DataDTO.Builder()
+                .requiredParams(Collections.singletonList("input1"))
+                .optionalParams(Collections.singletonList("input2"))
+                .build();
+        inputValidationService.prepareStepInputs(dataDTO, FlowExecutionContext);
+
+        Map<String, String> userInputData = new HashMap<>();
+        userInputData.put("input1", "value1");
+        userInputData.put("input2", "value2");
+        FlowExecutionContext.getUserInputData().putAll(userInputData);
+        FlowExecutionContext.setCurrentActionId(DEFAULT_ACTION);
+
+        inputValidationService.validateInputs(FlowExecutionContext);
+        Assert.assertEquals(FlowExecutionContext.getCurrentOptionalInputs().get(DEFAULT_ACTION).size(), 1);
+        Assert.assertTrue(FlowExecutionContext.getCurrentOptionalInputs().get(DEFAULT_ACTION).contains("input2"));
     }
 
     private FlowExecutionContext initiateFlowContext() {

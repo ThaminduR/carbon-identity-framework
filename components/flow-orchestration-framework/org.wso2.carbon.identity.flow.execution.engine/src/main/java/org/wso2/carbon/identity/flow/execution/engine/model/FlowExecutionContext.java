@@ -44,6 +44,7 @@ public class FlowExecutionContext implements Serializable {
     private Map<String, String> authenticatorProperties;
     private Map<String, Set<String>> currentStepInputs = new HashMap<>();
     private Map<String, Set<String>> currentRequiredInputs = new HashMap<>();
+    private Map<String, Set<String>> currentOptionalInputs = new HashMap<>();
     private List<NodeConfig> completedNodes = new ArrayList<>();
     private NodeConfig currentNode;
     private GraphConfig graphConfig;
@@ -204,6 +205,16 @@ public class FlowExecutionContext implements Serializable {
     public void setCurrentRequiredInputs(Map<String, Set<String>> currentRequiredInputs) {
 
         this.currentRequiredInputs = currentRequiredInputs;
+    }
+
+    public Map<String, Set<String>> getCurrentOptionalInputs() {
+
+        return currentOptionalInputs;
+    }
+
+    public void setCurrentOptionalInputs(Map<String, Set<String>> currentOptionalInputs) {
+
+        this.currentOptionalInputs = currentOptionalInputs;
     }
 
     public List<NodeConfig> getCompletedNodes() {

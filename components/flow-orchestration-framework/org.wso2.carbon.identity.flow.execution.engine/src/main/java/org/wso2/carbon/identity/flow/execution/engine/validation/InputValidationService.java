@@ -186,6 +186,7 @@ public class InputValidationService {
         // Clear the current step inputs and required inputs.
         context.getCurrentStepInputs().clear();
         context.getCurrentRequiredInputs().clear();
+        context.getCurrentOptionalInputs().clear();
 
         if (dataDTO.getComponents() != null) {
             for (ComponentDTO component : dataDTO.getComponents()) {
@@ -243,6 +244,8 @@ public class InputValidationService {
                 context.getCurrentStepInputs().isEmpty()) {
             handleRequiredInputs(dataDTO, context);
         }
+
+        handleOptionalInputs(dataDTO, context);
     }
 
     /**
@@ -255,6 +258,30 @@ public class InputValidationService {
 
         context.getCurrentRequiredInputs().put(DEFAULT_ACTION, new HashSet<>(dataDTO.getRequiredParams()));
         context.getCurrentStepInputs().put(DEFAULT_ACTION, new HashSet<>(dataDTO.getRequiredParams()));
+    }
+
+    /**
+     * Handle optional inputs by adding them to the current step inputs in the context.
+     *
+     * @param dataDTO Data transfer object containing components and optional parameters.
+     * @param context Flow context.
+     */
+    private static void handleOptionalInputs(DataDTO dataDTO, FlowExecutionContext context) {
+
+        if (dataDTO.getOptionalParams() == null || dataDTO.getOptionalParams().isEmpty()) {
+            return;
+        }
+
+        if (context.getCurrentStepInputs().isEmpty()) {
+            context.getCurrentStepInputs().put(DEFAULT_ACTION, new HashSet<>());
+        }
+
+        for (Map.Entry<String, Set<String>> entry : context.getCurrentStepInputs().entrySet()) {
+            entry.getValue().addAll(dataDTO.getOptionalParams());
+            context.getCurrentOptionalInputs()
+                    .computeIfAbsent(entry.getKey(), key -> new HashSet<>())
+                    .addAll(dataDTO.getOptionalParams());
+        }
     }
 
 
