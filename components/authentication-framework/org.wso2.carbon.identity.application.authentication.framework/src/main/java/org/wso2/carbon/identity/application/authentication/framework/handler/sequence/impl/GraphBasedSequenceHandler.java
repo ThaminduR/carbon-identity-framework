@@ -26,6 +26,8 @@ import org.apache.http.client.utils.URIBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.AsyncCaller;
 import org.wso2.carbon.identity.application.authentication.framework.AsyncProcess;
 import org.wso2.carbon.identity.application.authentication.framework.AsyncReturn;
+import org.wso2.carbon.identity.adaptive.guard.AdaptiveGuardService;
+import org.wso2.carbon.identity.adaptive.guard.AdaptiveGuardService.QuarantineMode;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.config.ConfigurationFacade;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.SequenceConfig;
@@ -58,6 +60,8 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.io.IOException;
@@ -120,6 +124,16 @@ public class GraphBasedSequenceHandler extends DefaultStepBasedSequenceHandler i
                         .getApplicationId());
             }
             DefaultStepBasedSequenceHandler.getInstance().handle(request, response, context);
+            return;
+        }
+        AdaptiveGuardService guardService = FrameworkServiceDataHolder.getInstance().getAdaptiveGuardService();
+        String organizationId = resolveOrganizationId(context);
+        if (guardService != null && guardService.isEnabled() && guardService.isQuarantined(organizationId)) {
+            if (log.isWarnEnabled()) {
+                log.warn(String.format("Adaptive script execution skipped due to guard quarantine. orgId=%s, tenant=%s, " +
+                        "sp=%s", organizationId, context.getTenantDomain(), context.getServiceProviderName()));
+            }
+            handleQuarantine(request, response, context, guardService, organizationId);
             return;
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -195,6 +209,32 @@ public class GraphBasedSequenceHandler extends DefaultStepBasedSequenceHandler i
                         " from first step.");
             }
         }
+    }
+
+    private void handleQuarantine(HttpServletRequest request, HttpServletResponse response,
+                                  AuthenticationContext context, AdaptiveGuardService guardService, String organizationId)
+            throws FrameworkException {
+
+        if (guardService.getQuarantineMode() == QuarantineMode.BLOCK_LOGIN) {
+            throw new FrameworkException("Adaptive authentication is temporarily disabled for this organization: "
+                    + organizationId);
+        }
+        DefaultStepBasedSequenceHandler.getInstance().handle(request, response, context);
+    }
+
+    private String resolveOrganizationId(AuthenticationContext context) {
+
+        OrganizationManager organizationManager = FrameworkServiceDataHolder.getInstance().getOrganizationManager();
+        if (organizationManager != null) {
+            try {
+                return organizationManager.resolveOrganizationId(context.getTenantDomain());
+            } catch (OrganizationManagementException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Unable to resolve organization id for tenant domain " + context.getTenantDomain(), e);
+                }
+            }
+        }
+        return context.getTenantDomain();
     }
 
     private boolean isBackToFirstStep(AuthenticationContext context) {

@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.application.authentication.framework.JsFunctionR
 import org.wso2.carbon.identity.application.authentication.framework.ServerSessionManagementService;
 import org.wso2.carbon.identity.application.authentication.framework.UserDefinedAuthenticatorService;
 import org.wso2.carbon.identity.application.authentication.framework.config.loader.SequenceLoader;
+import org.wso2.carbon.identity.adaptive.guard.AdaptiveGuardService;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.JSExecutionSupervisor;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.JsBaseGraphBuilderFactory;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.JsGenericGraphBuilderFactory;
@@ -115,6 +116,7 @@ public class FrameworkServiceDataHolder {
     private SessionSerializer sessionSerializer;
 
     private JSExecutionSupervisor jsExecutionSupervisor;
+    private AdaptiveGuardService adaptiveGuardService;
     private IdpManager identityProviderManager = null;
     private IdpManager idPManager;
     private ApplicationManagementService applicationManagementService;
@@ -687,6 +689,16 @@ public class FrameworkServiceDataHolder {
     public void setJsExecutionSupervisor(JSExecutionSupervisor jsExecutionSupervisor) {
 
         this.jsExecutionSupervisor = jsExecutionSupervisor;
+    }
+
+    public AdaptiveGuardService getAdaptiveGuardService() {
+
+        return adaptiveGuardService;
+    }
+
+    public void setAdaptiveGuardService(AdaptiveGuardService adaptiveGuardService) {
+
+        this.adaptiveGuardService = adaptiveGuardService;
     }
 
     public SessionContextMgtListener getSessionContextMgtListener(String inboundType) {
