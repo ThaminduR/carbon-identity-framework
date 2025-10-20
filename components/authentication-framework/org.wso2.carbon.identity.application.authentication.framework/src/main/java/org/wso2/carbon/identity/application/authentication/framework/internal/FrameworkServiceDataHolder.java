@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.framework.BundleContext;
 import org.wso2.carbon.consent.mgt.core.ConsentManager;
+import org.wso2.carbon.identity.adaptive.guard.AdaptiveGuardService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.JsFunctionRegistry;
@@ -127,6 +128,7 @@ public class FrameworkServiceDataHolder {
     private SecretResolveManager secretConfigManager;
     private UserDefinedAuthenticatorService userDefinedAuthenticatorService;
     private OrganizationDiscoveryHandler organizationDiscoveryHandler;
+    private AdaptiveGuardService adaptiveGuardService;
 
     private FrameworkServiceDataHolder() {
 
@@ -853,5 +855,15 @@ public class FrameworkServiceDataHolder {
     public void setOrganizationDiscoveryHandler(OrganizationDiscoveryHandler organizationDiscoveryHandler) {
 
         this.organizationDiscoveryHandler = organizationDiscoveryHandler;
+    }
+
+    public AdaptiveGuardService getAdaptiveGuardService() {
+
+        return adaptiveGuardService;
+    }
+
+    public void setAdaptiveGuardService(AdaptiveGuardService adaptiveGuardService) {
+
+        this.adaptiveGuardService = adaptiveGuardService;
     }
 }

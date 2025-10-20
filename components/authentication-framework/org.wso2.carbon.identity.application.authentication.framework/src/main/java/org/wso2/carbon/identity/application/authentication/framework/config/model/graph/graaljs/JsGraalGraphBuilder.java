@@ -27,6 +27,9 @@ import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
+import org.wso2.carbon.identity.adaptive.guard.AdaptiveGuardService;
+import org.wso2.carbon.identity.adaptive.guard.GuardMode;
+import org.wso2.carbon.identity.adaptive.guard.http.BoundedHttpClient;
 import org.wso2.carbon.identity.application.authentication.framework.AsyncProcess;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDecisionEvaluator;
 import org.wso2.carbon.identity.application.authentication.framework.JsFunctionRegistry;
@@ -46,9 +49,11 @@ import org.wso2.carbon.identity.application.authentication.framework.config.mode
 import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.graaljs.JsGraalAuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.internal.FrameworkServiceDataHolder;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -139,6 +144,21 @@ public class JsGraalGraphBuilder extends JsGraphBuilder {
     @Override
     public JsGraalGraphBuilder createWith(String script) {
 
+        AdaptiveGuardService adaptiveGuardService = FrameworkServiceDataHolder.getInstance().getAdaptiveGuardService();
+        String organizationId = resolveOrganizationId(authenticationContext);
+        boolean guardEnabled = adaptiveGuardService != null && adaptiveGuardService.isEnabled();
+        BoundedHttpClient boundedHttpClient = BoundedHttpClient.noop();
+        long inputBytes = estimateScriptBytes(script);
+        boolean limitBreached = false;
+
+        if (guardEnabled) {
+            if (adaptiveGuardService.isQuarantined(organizationId)) {
+                handleQuarantinedOrganization(adaptiveGuardService.getQuarantineMode(), organizationId);
+                return this;
+            }
+            boundedHttpClient = adaptiveGuardService.getBoundedHttpClient(organizationId);
+        }
+
         try {
             currentBuilder.set(this);
             Value bindings = context.getBindings(POLYGLOT_LANGUAGE);
@@ -190,6 +210,7 @@ public class JsGraalGraphBuilder extends JsGraphBuilder {
                             scriptExecutionData));
             JsGraalGraphBuilderFactory.persistCurrentContext(authenticationContext, context);
         } catch (PolyglotException e) {
+            limitBreached = true;
             result.setBuildSuccessful(false);
             result.setErrorReason(
                     "Error in executing the Javascript. " + JS_FUNC_ON_LOGIN_REQUEST + " reason, " + e.getMessage());
@@ -197,12 +218,18 @@ public class JsGraalGraphBuilder extends JsGraphBuilder {
                 log.debug("Error in executing the Javascript.", e);
             }
         } catch (IOException e) {
+            limitBreached = true;
             result.setBuildSuccessful(false);
             result.setErrorReason("Error in building  the Javascript source" + e.getMessage());
             if (log.isDebugEnabled()) {
                 log.debug("Error in building the Javascript source", e);
             }
         } finally {
+            if (guardEnabled) {
+                adaptiveGuardService.onFinish(organizationId, inputBytes, safeGetBytesIn(boundedHttpClient),
+                        0, 0, limitBreached ? 1 : 0);
+            }
+            closeQuietly(boundedHttpClient);
             clearCurrentBuilder(context);
         }
         return this;
@@ -707,6 +734,73 @@ public class JsGraalGraphBuilder extends JsGraphBuilder {
         public void prompt(String templateId, Object... parameters) {
 
             JsGraalGraphBuilder.this.addShowPrompt(templateId, parameters);
+        }
+    }
+
+    private void handleQuarantinedOrganization(GuardMode mode, String organizationId) {
+
+        if (mode == GuardMode.BLOCK_LOGIN) {
+            result.setBuildSuccessful(false);
+            result.setErrorReason("Adaptive authentication script execution blocked due to guard quarantine.");
+            if (log.isWarnEnabled()) {
+                log.warn(String.format("Adaptive script execution blocked for organization '%s' due to guard "
+                        + "quarantine.", organizationId));
+            }
+        } else {
+            if (log.isWarnEnabled()) {
+                log.warn(String.format("Adaptive script execution skipped for organization '%s' due to guard "
+                        + "quarantine.", organizationId));
+            }
+        }
+    }
+
+    private String resolveOrganizationId(AuthenticationContext context) {
+
+        if (context == null) {
+            return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+        String tenantDomain = context.getTenantDomain();
+        if (StringUtils.isNotBlank(tenantDomain)) {
+            return tenantDomain;
+        }
+        return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+    }
+
+    private long estimateScriptBytes(String script) {
+
+        if (script == null) {
+            return 0;
+        }
+        return script.getBytes(StandardCharsets.UTF_8).length;
+    }
+
+    private long safeGetBytesIn(BoundedHttpClient boundedHttpClient) {
+
+        if (boundedHttpClient == null) {
+            return 0;
+        }
+        try {
+            long value = boundedHttpClient.getBytesIn();
+            return Math.max(value, 0);
+        } catch (Exception e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Unable to obtain HTTP byte count from bounded client", e);
+            }
+            return 0;
+        }
+    }
+
+    private void closeQuietly(BoundedHttpClient boundedHttpClient) {
+
+        if (boundedHttpClient == null) {
+            return;
+        }
+        try {
+            boundedHttpClient.close();
+        } catch (Exception e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Error closing bounded HTTP client", e);
+            }
         }
     }
 
