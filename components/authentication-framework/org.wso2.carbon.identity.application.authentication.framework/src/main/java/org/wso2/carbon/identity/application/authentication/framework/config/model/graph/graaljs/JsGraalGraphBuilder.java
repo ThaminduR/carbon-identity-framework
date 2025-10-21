@@ -599,13 +599,13 @@ public class JsGraalGraphBuilder extends JsGraphBuilder {
             String organisationId = (String) authenticationContext
                     .getProperty(FrameworkConstants.JSAttributes.JS_GUARD_ORG_ID);
             ScriptExecutionGuardTracker guardTracker = ScriptExecutionGuardTracker.create(guardService, organisationId);
+            guardTracker.start();
             Optional<JSExecutionMonitorData> previousExecution =
                     Optional.ofNullable(retrieveAuthScriptExecutionMonitorData(authenticationContext));
             String identifier = UUID.randomUUID().toString();
             JSExecutionMonitorData monitorData = null;
             boolean monitorStarted = false;
             boolean guardBreach = false;
-            boolean success = false;
             ScriptExecutionGuardTracker.GuardResult guardOutcome = null;
             try {
                 currentBuilder.set(graphBuilder);
@@ -644,7 +644,6 @@ public class JsGraalGraphBuilder extends JsGraphBuilder {
                     monitorStarted = true;
                     result = jsFunction.apply(context, params);
                     guardTracker.recordOutputCandidate(result, GraalSerializer::toJsSerializableInternal);
-                    success = true;
                 } catch (AdaptiveScriptGuardException e) {
                     guardBreach = true;
                     throw e;
@@ -675,7 +674,7 @@ public class JsGraalGraphBuilder extends JsGraphBuilder {
                 FailNode failNode = new FailNode();
                 attachToLeaf(executingNode, failNode);
             } finally {
-                guardOutcome = guardTracker.finish(success, guardBreach, monitorData);
+                guardOutcome = guardTracker.finish(guardBreach);
                 contextForJs.remove();
                 dynamicallyBuiltBaseNode.remove();
                 clearCurrentBuilder(context);

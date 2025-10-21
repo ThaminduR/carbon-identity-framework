@@ -1121,12 +1121,12 @@ public class JsNashornGraphBuilder extends JsGraphBuilder {
                 String organisationId = (String) authenticationContext
                         .getProperty(FrameworkConstants.JSAttributes.JS_GUARD_ORG_ID);
                 ScriptExecutionGuardTracker guardTracker = ScriptExecutionGuardTracker.create(guardService, organisationId);
+                guardTracker.start();
                 String identifier = UUID.randomUUID().toString();
                 JSExecutionMonitorData scriptExecutionData =
                         retrieveAuthScriptExecutionMonitorData(authenticationContext);
                 boolean monitorStarted = false;
                 boolean guardBreach = false;
-                boolean success = false;
                 ScriptExecutionGuardTracker.GuardResult guardOutcome = null;
                 try {
                     currentBuilder.set(graphBuilder);
@@ -1159,7 +1159,6 @@ public class JsNashornGraphBuilder extends JsGraphBuilder {
                         monitorStarted = true;
                         result = jsFunction.apply(scriptEngine, params);
                         guardTracker.recordOutputCandidate(result, JsNashornSerializer::toJsSerializableInternal);
-                        success = true;
                     } catch (AdaptiveScriptGuardException e) {
                         guardBreach = true;
                         throw e;
@@ -1206,7 +1205,7 @@ public class JsNashornGraphBuilder extends JsGraphBuilder {
                     FailNode failNode = new FailNode();
                     attachToLeaf(executingNode, failNode);
                 } finally {
-                    guardOutcome = guardTracker.finish(success, guardBreach, scriptExecutionData);
+                    guardOutcome = guardTracker.finish(guardBreach);
                     contextForJs.remove();
                     dynamicallyBuiltBaseNode.remove();
                     clearCurrentBuilder();

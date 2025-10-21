@@ -18,11 +18,12 @@
 
 package org.wso2.carbon.identity.application.authentication.framework.guard;
 
+import com.sun.management.ThreadMXBean;
 import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.adaptive.guard.AdaptiveGuardService;
-import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.JSExecutionMonitorData;
 import org.wso2.carbon.identity.application.authentication.framework.exception.AdaptiveScriptGuardException;
 
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
 import java.util.IdentityHashMap;
@@ -44,8 +45,12 @@ public class ScriptExecutionGuardTracker {
     private long outputBytes;
     private boolean limitTriggered;
     private GuardResult lastResult;
+    private boolean started;
     private boolean finished;
     private boolean guardExceptionRaised;
+    private ThreadMemoryMonitor memoryMonitor;
+    private boolean memoryCaptured;
+    private long memoryBytes;
 
     private ScriptExecutionGuardTracker(AdaptiveGuardService guardService, String organisationId,
                                         int maxInputKb, int maxOutputKb) {
@@ -64,6 +69,21 @@ public class ScriptExecutionGuardTracker {
         return new ScriptExecutionGuardTracker(guardService, organisationId, maxInput, maxOutput);
     }
 
+    /**
+     * Starts monitoring for the current execution.
+     */
+    public void start() {
+
+        if (started) {
+            return;
+        }
+        started = true;
+        if (!enabled) {
+            return;
+        }
+        memoryMonitor = ThreadMemoryMonitor.start();
+    }
+
     private long toBytes(int kilobytes) {
 
         return kilobytes <= 0 ? 0L : kilobytes * 1024L;
@@ -80,6 +100,7 @@ public class ScriptExecutionGuardTracker {
         if (!enabled || finished) {
             return;
         }
+        ensureStarted();
         IdentityHashMap<Object, Boolean> visited = new IdentityHashMap<>();
         inputBytes = estimateAggregate(params, serializer, visited);
         if (maxInputBytes > 0 && inputBytes > maxInputBytes) {
@@ -101,6 +122,7 @@ public class ScriptExecutionGuardTracker {
         if (!enabled || finished) {
             return;
         }
+        ensureStarted();
         IdentityHashMap<Object, Boolean> visited = new IdentityHashMap<>();
         outputBytes = estimateValue(result, serializer, visited);
         if (maxOutputBytes > 0 && outputBytes > maxOutputBytes) {
@@ -114,12 +136,10 @@ public class ScriptExecutionGuardTracker {
     /**
      * Completes the execution and notifies the guard service.
      *
-     * @param scriptSucceeded {@code true} if the script completed successfully.
-     * @param guardBreach     {@code true} if the execution was terminated due to a guard violation.
-     * @param monitorData     Data returned from the legacy execution supervisor; used for memory metrics.
+     * @param guardBreach {@code true} if the execution was terminated due to a guard violation.
      * @return Result describing whether the login should be blocked and if the output limit was breached.
      */
-    public GuardResult finish(boolean scriptSucceeded, boolean guardBreach, JSExecutionMonitorData monitorData) {
+    public GuardResult finish(boolean guardBreach) {
 
         if (finished) {
             return lastResult != null ? lastResult : new GuardResult(false, guardExceptionRaised);
@@ -127,14 +147,36 @@ public class ScriptExecutionGuardTracker {
         boolean shouldBlock = limitTriggered || guardBreach;
         boolean guardException = guardBreach || guardExceptionRaised;
         if (enabled) {
-            long memoryBytes = monitorData != null ? monitorData.getConsumedMemory() : 0L;
-            boolean blocked = guardService.onFinish(organisationId, inputBytes, outputBytes, memoryBytes, shouldBlock);
+            long consumedMemory = captureMemory();
+            boolean blocked = guardService.onFinish(organisationId, inputBytes, outputBytes, consumedMemory, shouldBlock);
             shouldBlock = shouldBlock || blocked;
         }
         GuardResult result = new GuardResult(shouldBlock, guardException);
         lastResult = result;
         finished = true;
         return result;
+    }
+
+    private void ensureStarted() {
+
+        if (!started) {
+            start();
+        }
+    }
+
+    private long captureMemory() {
+
+        if (memoryCaptured) {
+            return memoryBytes;
+        }
+        memoryCaptured = true;
+        if (memoryMonitor == null) {
+            memoryBytes = 0L;
+            return 0L;
+        }
+        long consumed = memoryMonitor.finish();
+        memoryBytes = consumed;
+        return consumed;
     }
 
     private long estimateAggregate(Object[] values, Function<Object, Object> serializer,
@@ -240,6 +282,63 @@ public class ScriptExecutionGuardTracker {
         public boolean wasGuardExceptionRaised() {
 
             return guardExceptionRaised;
+        }
+    }
+
+    /**
+     * Captures thread allocated memory for the duration of the script execution.
+     */
+    private static final class ThreadMemoryMonitor {
+
+        private final ThreadMXBean threadMXBean;
+        private final long threadId;
+        private final long startBytes;
+        private final boolean supported;
+
+        private ThreadMemoryMonitor(ThreadMXBean threadMXBean, long threadId, long startBytes, boolean supported) {
+
+            this.threadMXBean = threadMXBean;
+            this.threadId = threadId;
+            this.startBytes = startBytes;
+            this.supported = supported;
+        }
+
+        static ThreadMemoryMonitor start() {
+
+            java.lang.management.ThreadMXBean baseMxBean = ManagementFactory.getThreadMXBean();
+            if (!(baseMxBean instanceof ThreadMXBean)) {
+                return new ThreadMemoryMonitor(null, -1L, 0L, false);
+            }
+            ThreadMXBean threadMXBean = (ThreadMXBean) baseMxBean;
+            if (!threadMXBean.isThreadAllocatedMemorySupported()) {
+                return new ThreadMemoryMonitor(null, -1L, 0L, false);
+            }
+            try {
+                if (!threadMXBean.isThreadAllocatedMemoryEnabled()) {
+                    threadMXBean.setThreadAllocatedMemoryEnabled(true);
+                }
+            } catch (UnsupportedOperationException | SecurityException e) {
+                return new ThreadMemoryMonitor(null, -1L, 0L, false);
+            }
+            long threadId = Thread.currentThread().getId();
+            long start = threadMXBean.getThreadAllocatedBytes(threadId);
+            if (start < 0) {
+                start = 0L;
+            }
+            return new ThreadMemoryMonitor(threadMXBean, threadId, start, true);
+        }
+
+        long finish() {
+
+            if (!supported || threadMXBean == null) {
+                return 0L;
+            }
+            long current = threadMXBean.getThreadAllocatedBytes(threadId);
+            if (current < 0) {
+                return 0L;
+            }
+            long delta = current - startBytes;
+            return delta > 0 ? delta : 0L;
         }
     }
 }
