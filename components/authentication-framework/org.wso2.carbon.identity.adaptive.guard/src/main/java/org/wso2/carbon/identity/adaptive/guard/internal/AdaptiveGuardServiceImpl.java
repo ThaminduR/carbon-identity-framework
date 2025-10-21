@@ -26,10 +26,6 @@ import org.wso2.carbon.identity.adaptive.guard.http.BoundedHttpClient;
 import org.wso2.carbon.identity.adaptive.guard.http.BoundedHttpClientFactory;
 import org.wso2.carbon.identity.adaptive.guard.internal.config.GuardConfig;
 
-import java.io.IOException;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
 /**
  * Default implementation of {@link AdaptiveGuardService}.
  */
@@ -42,7 +38,6 @@ public class AdaptiveGuardServiceImpl implements AdaptiveGuardService {
     private final ScriptMonitor monitor;
     private final QuarantineService quarantineService;
     private final BoundedHttpClientFactory httpClientFactory;
-    private final ConcurrentMap<String, BoundedHttpClient> httpClients = new ConcurrentHashMap<>();
 
     public AdaptiveGuardServiceImpl() {
 
@@ -76,9 +71,9 @@ public class AdaptiveGuardServiceImpl implements AdaptiveGuardService {
     public BoundedHttpClient getBoundedHttpClient(String orgId) {
 
         if (!config.isEnabled()) {
-            return new BoundedHttpClientFactory(0).create(orgId);
+            return httpClientFactory.create(orgId);
         }
-        return httpClients.compute(orgId, (key, existing) -> existing != null ? existing : httpClientFactory.create(key));
+        return httpClientFactory.create(orgId);
     }
 
     @Override
@@ -118,21 +113,9 @@ public class AdaptiveGuardServiceImpl implements AdaptiveGuardService {
         if (tripped) {
             quarantineService.quarantine(orgId, config.getCoolOffMillis());
             monitor.clear(orgId);
-            httpClients.remove(orgId);
             if (LOG.isWarnEnabled()) {
                 LOG.warn(String.format("Adaptive guard quarantined org: %s (bytes=%d, breaches=%d)", orgId,
                         totalBytes, limitBreaches));
-            }
-        }
-        if (httpBytesIn <= 0) {
-            return;
-        }
-        BoundedHttpClient client = httpClients.get(orgId);
-        if (client != null) {
-            try {
-                client.registerBytes(httpBytesIn);
-            } catch (IOException e) {
-                LOG.debug("HTTP budget already recorded for organisation " + orgId, e);
             }
         }
     }

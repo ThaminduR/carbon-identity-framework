@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.application.authentication.framework.config.mode
 import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.ShowPromptNode;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.StepConfigGraphNode;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.AdaptiveScriptGuardException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.JsFailureException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.sequence.SequenceHandler;
@@ -128,6 +129,7 @@ public class GraphBasedSequenceHandler extends DefaultStepBasedSequenceHandler i
         }
         AdaptiveGuardService guardService = FrameworkServiceDataHolder.getInstance().getAdaptiveGuardService();
         String organizationId = resolveOrganizationId(context);
+        context.setProperty(FrameworkConstants.JSAttributes.JS_GUARD_ORG_ID, organizationId);
         if (guardService != null && guardService.isEnabled() && guardService.isQuarantined(organizationId)) {
             if (log.isWarnEnabled()) {
                 log.warn(String.format("Adaptive script execution skipped due to guard quarantine. orgId=%s, tenant=%s, " +
@@ -136,7 +138,8 @@ public class GraphBasedSequenceHandler extends DefaultStepBasedSequenceHandler i
             handleQuarantine(request, response, context, guardService, organizationId);
             return;
         }
-        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+        try {
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     FrameworkConstants.LogConstants.AUTHENTICATION_FRAMEWORK,
                     FrameworkConstants.LogConstants.ActionIDs.HANDLE_AUTH_REQUEST);
@@ -152,35 +155,47 @@ public class GraphBasedSequenceHandler extends DefaultStepBasedSequenceHandler i
                             applicationName));
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
-        if (!graph.isBuildSuccessful()) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
-                        FrameworkConstants.LogConstants.AUTHENTICATION_FRAMEWORK,
-                        FrameworkConstants.LogConstants.AUTH_SCRIPT_LOGGING)
-                        .inputParam(LogConstants.InputKeys.TENANT_DOMAIN, context.getTenantDomain())
-                        .inputParam(LogConstants.InputKeys.APPLICATION_NAME, context.getServiceProviderName())
-                        .resultMessage((graph.getErrorReason() != null &&
-                                graph.getErrorReason().contains(POLYGLOT_CLASS)) ? "Error while parsing the " +
-                                "authentication script." :
-                                "Error while parsing the authentication script. Nested exception is: " + graph
-                                        .getErrorReason())
-                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
-                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+            if (!graph.isBuildSuccessful()) {
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            FrameworkConstants.LogConstants.AUTHENTICATION_FRAMEWORK,
+                            FrameworkConstants.LogConstants.AUTH_SCRIPT_LOGGING)
+                            .inputParam(LogConstants.InputKeys.TENANT_DOMAIN, context.getTenantDomain())
+                            .inputParam(LogConstants.InputKeys.APPLICATION_NAME, context.getServiceProviderName())
+                            .resultMessage((graph.getErrorReason() != null &&
+                                    graph.getErrorReason().contains(POLYGLOT_CLASS)) ? "Error while parsing the " +
+                                    "authentication script." :
+                                    "Error while parsing the authentication script. Nested exception is: " + graph
+                                            .getErrorReason())
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+                }
+                throw new FrameworkException(
+                        "Error while building graph from Javascript. Nested exception is: " + graph.getErrorReason());
             }
-            throw new FrameworkException(
-                    "Error while building graph from Javascript. Nested exception is: " + graph.getErrorReason());
-        }
 
-        boolean isInterrupted = false;
-        while (!isInterrupted && !context.getSequenceConfig().isCompleted()) {
+            boolean isInterrupted = false;
+            while (!isInterrupted && !context.getSequenceConfig().isCompleted()) {
 
-            AuthGraphNode currentNode = (AuthGraphNode) context
-                    .getProperty(FrameworkConstants.JSAttributes.PROP_CURRENT_NODE);
-            if (currentNode == null) {
-                isInterrupted = handleInitialize(request, response, context, sequenceConfig, graph);
-            } else {
-                isInterrupted = handleNode(request, response, context, sequenceConfig, currentNode);
+                AuthGraphNode currentNode = (AuthGraphNode) context
+                        .getProperty(FrameworkConstants.JSAttributes.PROP_CURRENT_NODE);
+                if (currentNode == null) {
+                    isInterrupted = handleInitialize(request, response, context, sequenceConfig, graph);
+                } else {
+                    isInterrupted = handleNode(request, response, context, sequenceConfig, currentNode);
+                }
             }
+        } catch (AdaptiveScriptGuardException e) {
+            if (guardService != null && guardService.isEnabled()) {
+                if (log.isWarnEnabled()) {
+                    log.warn(String.format("Adaptive script execution aborted by guard. orgId=%s, tenant=%s, sp=%s: %s",
+                            organizationId, context.getTenantDomain(), context.getServiceProviderName(),
+                            e.getMessage()), e);
+                }
+                handleQuarantine(request, response, context, guardService, organizationId);
+                return;
+            }
+            throw new FrameworkException("Adaptive script guard violation", e);
         }
     }
 

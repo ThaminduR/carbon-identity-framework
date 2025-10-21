@@ -24,6 +24,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
+import org.wso2.carbon.identity.adaptive.guard.AdaptiveGuardService;
 import org.wso2.carbon.identity.application.authentication.framework.AsyncProcess;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDecisionEvaluator;
 import org.wso2.carbon.identity.application.authentication.framework.JsFunctionRegistry;
@@ -33,6 +34,8 @@ import org.wso2.carbon.identity.application.authentication.framework.config.mode
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.internal.FrameworkServiceComponent;
 import org.wso2.carbon.identity.application.authentication.framework.internal.FrameworkServiceDataHolder;
+import org.wso2.carbon.identity.application.authentication.framework.exception.AdaptiveScriptGuardException;
+import org.wso2.carbon.identity.application.authentication.framework.guard.ScriptExecutionGuardTracker;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
@@ -1114,6 +1117,17 @@ public class JsNashornGraphBuilder extends JsGraphBuilder {
             }
             if (jsFunction.isFunction()) {
                 ScriptEngine scriptEngine = getEngine(authenticationContext);
+                AdaptiveGuardService guardService = FrameworkServiceDataHolder.getInstance().getAdaptiveGuardService();
+                String organisationId = (String) authenticationContext
+                        .getProperty(FrameworkConstants.JSAttributes.JS_GUARD_ORG_ID);
+                ScriptExecutionGuardTracker guardTracker = ScriptExecutionGuardTracker.create(guardService, organisationId);
+                String identifier = UUID.randomUUID().toString();
+                JSExecutionMonitorData scriptExecutionData =
+                        retrieveAuthScriptExecutionMonitorData(authenticationContext);
+                boolean monitorStarted = false;
+                boolean guardBreach = false;
+                boolean success = false;
+                boolean outputLimitBreached = false;
                 try {
                     currentBuilder.set(graphBuilder);
                     JsGraphBuilderFactory.restoreCurrentContext(authenticationContext, scriptEngine);
@@ -1139,14 +1153,20 @@ public class JsNashornGraphBuilder extends JsGraphBuilder {
                     removeDefaultFunctions(scriptEngine);
                     JsNashornGraphBuilder.contextForJs.set(authenticationContext);
 
-                    String identifier = UUID.randomUUID().toString();
-                    JSExecutionMonitorData scriptExecutionData =
-                            retrieveAuthScriptExecutionMonitorData(authenticationContext);
+                    guardTracker.recordInput(params, JsNashornSerializer::toJsSerializableInternal);
                     try {
                         startScriptExecutionMonitor(identifier, authenticationContext, scriptExecutionData);
+                        monitorStarted = true;
                         result = jsFunction.apply(scriptEngine, params);
+                        guardTracker.recordOutputCandidate(result, JsNashornSerializer::toJsSerializableInternal);
+                        success = true;
+                    } catch (AdaptiveScriptGuardException e) {
+                        guardBreach = true;
+                        throw e;
                     } finally {
-                        scriptExecutionData = endScriptExecutionMonitor(identifier);
+                        if (monitorStarted) {
+                            scriptExecutionData = endScriptExecutionMonitor(identifier);
+                        }
                     }
                     if (scriptExecutionData != null) {
                         storeAuthScriptExecutionMonitorData(authenticationContext, scriptExecutionData);
@@ -1159,6 +1179,8 @@ public class JsNashornGraphBuilder extends JsGraphBuilder {
                         infuse(executingNode, dynamicallyBuiltBaseNode.get());
                     }
 
+                } catch (AdaptiveScriptGuardException e) {
+                    throw e;
                 } catch (Throwable e) {
                     // We need to catch all the javascript errors here, then log and handle.
                     if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -1184,9 +1206,14 @@ public class JsNashornGraphBuilder extends JsGraphBuilder {
                     FailNode failNode = new FailNode();
                     attachToLeaf(executingNode, failNode);
                 } finally {
+                    outputLimitBreached = guardTracker.finish(success, guardBreach, scriptExecutionData);
                     contextForJs.remove();
                     dynamicallyBuiltBaseNode.remove();
                     clearCurrentBuilder();
+                    if (outputLimitBreached) {
+                        throw new AdaptiveScriptGuardException(
+                                "Adaptive authentication script output exceeded the configured limit");
+                    }
                 }
 
             } else {

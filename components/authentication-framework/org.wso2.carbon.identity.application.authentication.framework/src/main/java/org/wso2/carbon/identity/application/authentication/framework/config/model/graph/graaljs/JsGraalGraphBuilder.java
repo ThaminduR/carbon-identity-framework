@@ -27,6 +27,7 @@ import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
+import org.wso2.carbon.identity.adaptive.guard.AdaptiveGuardService;
 import org.wso2.carbon.identity.application.authentication.framework.AsyncProcess;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDecisionEvaluator;
 import org.wso2.carbon.identity.application.authentication.framework.JsFunctionRegistry;
@@ -45,7 +46,10 @@ import org.wso2.carbon.identity.application.authentication.framework.config.mode
 import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.StepConfigGraphNode;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.graaljs.JsGraalAuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
+import org.wso2.carbon.identity.application.authentication.framework.exception.AdaptiveScriptGuardException;
 import org.wso2.carbon.identity.application.authentication.framework.internal.FrameworkServiceDataHolder;
+import org.wso2.carbon.identity.application.authentication.framework.guard.ScriptExecutionGuardTracker;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -591,6 +595,18 @@ public class JsGraalGraphBuilder extends JsGraphBuilder {
             if (!jsFunction.isFunction()) {
                 return jsFunction.getSource();
             }
+            AdaptiveGuardService guardService = FrameworkServiceDataHolder.getInstance().getAdaptiveGuardService();
+            String organisationId = (String) authenticationContext
+                    .getProperty(FrameworkConstants.JSAttributes.JS_GUARD_ORG_ID);
+            ScriptExecutionGuardTracker guardTracker = ScriptExecutionGuardTracker.create(guardService, organisationId);
+            Optional<JSExecutionMonitorData> previousExecution =
+                    Optional.ofNullable(retrieveAuthScriptExecutionMonitorData(authenticationContext));
+            String identifier = UUID.randomUUID().toString();
+            JSExecutionMonitorData monitorData = null;
+            boolean monitorStarted = false;
+            boolean guardBreach = false;
+            boolean success = false;
+            boolean outputLimitBreached = false;
             try {
                 currentBuilder.set(graphBuilder);
                 JsGraalGraphBuilderFactory.restoreCurrentContext(authenticationContext, context);
@@ -622,19 +638,24 @@ public class JsGraalGraphBuilder extends JsGraphBuilder {
                 removeDefaultFunctions(context);
                 JsGraalGraphBuilder.contextForJs.set(authenticationContext);
 
-                String identifier = UUID.randomUUID().toString();
-                Optional<JSExecutionMonitorData> optionalScriptExecutionData =
-                        Optional.ofNullable(retrieveAuthScriptExecutionMonitorData(authenticationContext));
+                guardTracker.recordInput(params, GraalSerializer::toJsSerializableInternal);
                 try {
-                    startScriptExecutionMonitor(identifier, authenticationContext,
-                            optionalScriptExecutionData.orElse(null));
+                    startScriptExecutionMonitor(identifier, authenticationContext, previousExecution.orElse(null));
+                    monitorStarted = true;
                     result = jsFunction.apply(context, params);
+                    guardTracker.recordOutputCandidate(result, GraalSerializer::toJsSerializableInternal);
+                    success = true;
+                } catch (AdaptiveScriptGuardException e) {
+                    guardBreach = true;
+                    throw e;
                 } finally {
-                    optionalScriptExecutionData = Optional.ofNullable(endScriptExecutionMonitor(identifier));
+                    if (monitorStarted) {
+                        monitorData = endScriptExecutionMonitor(identifier);
+                    }
                 }
-                optionalScriptExecutionData.ifPresent(
-                        scriptExecutionData -> storeAuthScriptExecutionMonitorData(authenticationContext,
-                                scriptExecutionData));
+
+                Optional.ofNullable(monitorData).ifPresent(data ->
+                        storeAuthScriptExecutionMonitorData(authenticationContext, data));
 
                 JsGraalGraphBuilderFactory.persistCurrentContext(authenticationContext, context);
 
@@ -643,6 +664,8 @@ public class JsGraalGraphBuilder extends JsGraphBuilder {
                     infuse(executingNode, dynamicallyBuiltBaseNode.get());
                 }
 
+            } catch (AdaptiveScriptGuardException e) {
+                throw e;
             } catch (Throwable e) {
                 //We need to catch all the javascript errors here, then log and handle.
                 log.error("Error in executing the javascript for service provider : " +
@@ -652,9 +675,14 @@ public class JsGraalGraphBuilder extends JsGraphBuilder {
                 FailNode failNode = new FailNode();
                 attachToLeaf(executingNode, failNode);
             } finally {
+                outputLimitBreached = guardTracker.finish(success, guardBreach, monitorData);
                 contextForJs.remove();
                 dynamicallyBuiltBaseNode.remove();
                 clearCurrentBuilder(context);
+                if (outputLimitBreached) {
+                    throw new AdaptiveScriptGuardException(
+                            "Adaptive authentication script output exceeded the configured limit");
+                }
             }
             return result;
         }
