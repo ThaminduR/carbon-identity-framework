@@ -23,10 +23,6 @@ import org.wso2.carbon.identity.adaptive.guard.AdaptiveGuardService;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.JSExecutionMonitorData;
 import org.wso2.carbon.identity.application.authentication.framework.exception.AdaptiveScriptGuardException;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
 import java.util.IdentityHashMap;
@@ -47,7 +43,6 @@ public class ScriptExecutionGuardTracker {
     private long inputBytes;
     private long outputBytes;
     private boolean limitTriggered;
-    private boolean outputLimitBreached;
     private GuardResult lastResult;
     private boolean finished;
     private boolean guardExceptionRaised;
@@ -109,8 +104,10 @@ public class ScriptExecutionGuardTracker {
         IdentityHashMap<Object, Boolean> visited = new IdentityHashMap<>();
         outputBytes = estimateValue(result, serializer, visited);
         if (maxOutputBytes > 0 && outputBytes > maxOutputBytes) {
-            outputLimitBreached = true;
             limitTriggered = true;
+            guardExceptionRaised = true;
+            throw new AdaptiveScriptGuardException(
+                    "Adaptive authentication script output exceeded the configured limit");
         }
     }
 
@@ -125,9 +122,8 @@ public class ScriptExecutionGuardTracker {
     public GuardResult finish(boolean scriptSucceeded, boolean guardBreach, JSExecutionMonitorData monitorData) {
 
         if (finished) {
-            return lastResult != null ? lastResult : new GuardResult(false, false, guardExceptionRaised);
+            return lastResult != null ? lastResult : new GuardResult(false, guardExceptionRaised);
         }
-        boolean outputBreach = scriptSucceeded && outputLimitBreached;
         boolean shouldBlock = limitTriggered || guardBreach;
         boolean guardException = guardBreach || guardExceptionRaised;
         if (enabled) {
@@ -135,7 +131,7 @@ public class ScriptExecutionGuardTracker {
             boolean blocked = guardService.onFinish(organisationId, inputBytes, outputBytes, memoryBytes, shouldBlock);
             shouldBlock = shouldBlock || blocked;
         }
-        GuardResult result = new GuardResult(shouldBlock, outputBreach, guardException);
+        GuardResult result = new GuardResult(shouldBlock, guardException);
         lastResult = result;
         finished = true;
         return result;
@@ -207,23 +203,9 @@ public class ScriptExecutionGuardTracker {
                 }
                 return total;
             }
-            if (value instanceof Serializable) {
-                return serializedSize((Serializable) value);
-            }
             return value.toString().getBytes(StandardCharsets.UTF_8).length;
         } finally {
             visited.remove(value);
-        }
-    }
-
-    private long serializedSize(Serializable value) {
-
-        try (ByteArrayOutputStream out = new ByteArrayOutputStream();
-             ObjectOutputStream objectOutputStream = new ObjectOutputStream(out)) {
-            objectOutputStream.writeObject(value);
-            return out.size();
-        } catch (IOException e) {
-            return value.toString().getBytes(StandardCharsets.UTF_8).length;
         }
     }
 
@@ -242,24 +224,17 @@ public class ScriptExecutionGuardTracker {
     public static final class GuardResult {
 
         private final boolean blockLogin;
-        private final boolean outputLimitBreached;
         private final boolean guardExceptionRaised;
 
-        private GuardResult(boolean blockLogin, boolean outputLimitBreached, boolean guardExceptionRaised) {
+        private GuardResult(boolean blockLogin, boolean guardExceptionRaised) {
 
             this.blockLogin = blockLogin;
-            this.outputLimitBreached = outputLimitBreached;
             this.guardExceptionRaised = guardExceptionRaised;
         }
 
         public boolean shouldBlockLogin() {
 
             return blockLogin;
-        }
-
-        public boolean isOutputLimitBreached() {
-
-            return outputLimitBreached;
         }
 
         public boolean wasGuardExceptionRaised() {

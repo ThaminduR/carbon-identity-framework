@@ -679,10 +679,6 @@ public class JsGraalGraphBuilder extends JsGraphBuilder {
                 contextForJs.remove();
                 dynamicallyBuiltBaseNode.remove();
                 clearCurrentBuilder(context);
-                if (guardOutcome != null && guardOutcome.isOutputLimitBreached()) {
-                    throw new AdaptiveScriptGuardException(
-                            "Adaptive authentication script output exceeded the configured limit");
-                }
                 if (guardOutcome != null && guardOutcome.shouldBlockLogin()
                         && !guardOutcome.wasGuardExceptionRaised()) {
                     throw new AdaptiveScriptGuardException(

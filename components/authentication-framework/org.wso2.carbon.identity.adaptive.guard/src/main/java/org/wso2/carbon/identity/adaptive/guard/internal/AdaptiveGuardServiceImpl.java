@@ -18,9 +18,9 @@
 
 package org.wso2.carbon.identity.adaptive.guard.internal;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.adaptive.guard.AdaptiveGuardService;
 import org.wso2.carbon.identity.adaptive.guard.internal.config.GuardConfig;
 
