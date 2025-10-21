@@ -25,7 +25,6 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.wso2.carbon.identity.adaptive.guard.AdaptiveGuardService;
-import org.wso2.carbon.identity.adaptive.guard.http.BoundedHttpClient;
 
 /**
  * Declarative service component that exposes the adaptive guard.
@@ -60,24 +59,6 @@ public class AdaptiveGuardComponent implements AdaptiveGuardService {
     }
 
     @Override
-    public boolean isQuarantined(String orgId) {
-
-        return adaptiveGuardService.isQuarantined(orgId);
-    }
-
-    @Override
-    public BoundedHttpClient getBoundedHttpClient(String orgId) {
-
-        return adaptiveGuardService.getBoundedHttpClient(orgId);
-    }
-
-    @Override
-    public QuarantineMode getQuarantineMode() {
-
-        return adaptiveGuardService.getQuarantineMode();
-    }
-
-    @Override
     public long getScriptTimeoutMillis() {
 
         return adaptiveGuardService.getScriptTimeoutMillis();
@@ -96,9 +77,8 @@ public class AdaptiveGuardComponent implements AdaptiveGuardService {
     }
 
     @Override
-    public void onFinish(String orgId, long inputBytes, long httpBytesIn, long outputBytes, long allocatedBytes,
-                         int limitBreaches) {
+    public boolean onFinish(String orgId, long inputBytes, long outputBytes, long memoryBytes, boolean limitBreached) {
 
-        adaptiveGuardService.onFinish(orgId, inputBytes, httpBytesIn, outputBytes, allocatedBytes, limitBreaches);
+        return adaptiveGuardService.onFinish(orgId, inputBytes, outputBytes, memoryBytes, limitBreached);
     }
 }

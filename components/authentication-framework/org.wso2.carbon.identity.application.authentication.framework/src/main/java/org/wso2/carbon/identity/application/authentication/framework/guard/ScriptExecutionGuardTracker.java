@@ -27,8 +27,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.lang.management.ManagementFactory;
-import java.lang.management.ThreadMXBean;
 import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
 import java.util.IdentityHashMap;
@@ -36,12 +34,9 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * Collects metrics for adaptive script executions and notifies the adaptive guard service.
+ * Collects basic metrics for adaptive script executions and notifies the adaptive guard service.
  */
 public class ScriptExecutionGuardTracker {
-
-    private static final ThreadMXBean THREAD_MX_BEAN = ManagementFactory.getThreadMXBean();
-    private static final boolean THREAD_ALLOC_SUPPORTED = THREAD_MX_BEAN.isThreadAllocatedMemorySupported();
 
     private final AdaptiveGuardService guardService;
     private final String organisationId;
@@ -49,11 +44,13 @@ public class ScriptExecutionGuardTracker {
     private final long maxOutputBytes;
     private final boolean enabled;
 
-    private long allocationSnapshot;
     private long inputBytes;
     private long outputBytes;
+    private boolean limitTriggered;
     private boolean outputLimitBreached;
+    private GuardResult lastResult;
     private boolean finished;
+    private boolean guardExceptionRaised;
 
     private ScriptExecutionGuardTracker(AdaptiveGuardService guardService, String organisationId,
                                         int maxInputKb, int maxOutputKb) {
@@ -85,18 +82,17 @@ public class ScriptExecutionGuardTracker {
      */
     public void recordInput(Object[] params, Function<Object, Object> serializer) {
 
-        if (!enabled) {
-            allocationSnapshot = snapshotAllocation();
+        if (!enabled || finished) {
             return;
         }
         IdentityHashMap<Object, Boolean> visited = new IdentityHashMap<>();
         inputBytes = estimateAggregate(params, serializer, visited);
         if (maxInputBytes > 0 && inputBytes > maxInputBytes) {
-            guardService.onFinish(organisationId, inputBytes, 0L, 0L, 0L, 1);
-            finished = true;
-            throw new AdaptiveScriptGuardException("Adaptive authentication script input exceeded the configured limit");
+            limitTriggered = true;
+            guardExceptionRaised = true;
+            throw new AdaptiveScriptGuardException(
+                    "Adaptive authentication script input exceeded the configured limit");
         }
-        allocationSnapshot = snapshotAllocation();
     }
 
     /**
@@ -107,64 +103,42 @@ public class ScriptExecutionGuardTracker {
      */
     public void recordOutputCandidate(Object result, Function<Object, Object> serializer) {
 
-        if (!enabled) {
+        if (!enabled || finished) {
             return;
         }
         IdentityHashMap<Object, Boolean> visited = new IdentityHashMap<>();
         outputBytes = estimateValue(result, serializer, visited);
         if (maxOutputBytes > 0 && outputBytes > maxOutputBytes) {
             outputLimitBreached = true;
+            limitTriggered = true;
         }
     }
 
     /**
      * Completes the execution and notifies the guard service.
      *
-     * @param success      {@code true} if the script completed successfully.
-     * @param guardBreach  {@code true} if the execution was terminated due to a guard violation.
-     * @param monitorData  Data returned from the legacy execution supervisor; used as a fallback for memory metrics.
-     * @return {@code true} if the guard should raise an output limit breach after completion.
+     * @param scriptSucceeded {@code true} if the script completed successfully.
+     * @param guardBreach     {@code true} if the execution was terminated due to a guard violation.
+     * @param monitorData     Data returned from the legacy execution supervisor; used for memory metrics.
+     * @return Result describing whether the login should be blocked and if the output limit was breached.
      */
-    public boolean finish(boolean success, boolean guardBreach, JSExecutionMonitorData monitorData) {
+    public GuardResult finish(boolean scriptSucceeded, boolean guardBreach, JSExecutionMonitorData monitorData) {
 
-        if (!enabled || finished) {
-            return success && outputLimitBreached;
+        if (finished) {
+            return lastResult != null ? lastResult : new GuardResult(false, false, guardExceptionRaised);
         }
-        long allocatedBytes = allocatedBytesSinceSnapshot();
-        if (allocatedBytes <= 0 && monitorData != null) {
-            allocatedBytes = monitorData.getConsumedMemory();
+        boolean outputBreach = scriptSucceeded && outputLimitBreached;
+        boolean shouldBlock = limitTriggered || guardBreach;
+        boolean guardException = guardBreach || guardExceptionRaised;
+        if (enabled) {
+            long memoryBytes = monitorData != null ? monitorData.getConsumedMemory() : 0L;
+            boolean blocked = guardService.onFinish(organisationId, inputBytes, outputBytes, memoryBytes, shouldBlock);
+            shouldBlock = shouldBlock || blocked;
         }
-        int breaches = (guardBreach || outputLimitBreached) ? 1 : 0;
-        guardService.onFinish(organisationId, inputBytes, 0L, outputBytes, allocatedBytes, breaches);
+        GuardResult result = new GuardResult(shouldBlock, outputBreach, guardException);
+        lastResult = result;
         finished = true;
-        return success && outputLimitBreached;
-    }
-
-    private long snapshotAllocation() {
-
-        if (!THREAD_ALLOC_SUPPORTED) {
-            return 0L;
-        }
-        try {
-            if (!THREAD_MX_BEAN.isThreadAllocatedMemoryEnabled()) {
-                THREAD_MX_BEAN.setThreadAllocatedMemoryEnabled(true);
-            }
-        } catch (UnsupportedOperationException ignored) {
-            return 0L;
-        }
-        return THREAD_MX_BEAN.getThreadAllocatedBytes(Thread.currentThread().getId());
-    }
-
-    private long allocatedBytesSinceSnapshot() {
-
-        if (!THREAD_ALLOC_SUPPORTED || allocationSnapshot <= 0) {
-            return 0L;
-        }
-        long now = THREAD_MX_BEAN.getThreadAllocatedBytes(Thread.currentThread().getId());
-        if (now <= 0 || now < allocationSnapshot) {
-            return 0L;
-        }
-        return now - allocationSnapshot;
+        return result;
     }
 
     private long estimateAggregate(Object[] values, Function<Object, Object> serializer,
@@ -260,5 +234,37 @@ public class ScriptExecutionGuardTracker {
             return Long.MAX_VALUE;
         }
         return result;
+    }
+
+    /**
+     * Outcome returned after finishing a guard tracked execution.
+     */
+    public static final class GuardResult {
+
+        private final boolean blockLogin;
+        private final boolean outputLimitBreached;
+        private final boolean guardExceptionRaised;
+
+        private GuardResult(boolean blockLogin, boolean outputLimitBreached, boolean guardExceptionRaised) {
+
+            this.blockLogin = blockLogin;
+            this.outputLimitBreached = outputLimitBreached;
+            this.guardExceptionRaised = guardExceptionRaised;
+        }
+
+        public boolean shouldBlockLogin() {
+
+            return blockLogin;
+        }
+
+        public boolean isOutputLimitBreached() {
+
+            return outputLimitBreached;
+        }
+
+        public boolean wasGuardExceptionRaised() {
+
+            return guardExceptionRaised;
+        }
     }
 }

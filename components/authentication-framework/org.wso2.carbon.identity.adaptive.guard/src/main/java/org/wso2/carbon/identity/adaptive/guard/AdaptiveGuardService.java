@@ -18,17 +18,10 @@
 
 package org.wso2.carbon.identity.adaptive.guard;
 
-import org.wso2.carbon.identity.adaptive.guard.http.BoundedHttpClient;
-
 /**
  * Adaptive guard service contract. Provides guard rails for adaptive authentication scripts.
  */
 public interface AdaptiveGuardService {
-
-    enum QuarantineMode {
-        SKIP_SCRIPT,
-        BLOCK_LOGIN
-    }
 
     /**
      * Indicates whether the adaptive guard is enabled in the deployment configuration.
@@ -36,29 +29,6 @@ public interface AdaptiveGuardService {
      * @return {@code true} if guard functionality is enabled.
      */
     boolean isEnabled();
-
-    /**
-     * Returns whether the provided organisation is currently quarantined.
-     *
-     * @param orgId Organisation identifier.
-     * @return {@code true} if the organisation is quarantined.
-     */
-    boolean isQuarantined(String orgId);
-
-    /**
-     * Returns a HTTP client wrapper with guard rails applied for the provided organisation.
-     *
-     * @param orgId Organisation identifier.
-     * @return HTTP client that enforces configured budgets.
-     */
-    BoundedHttpClient getBoundedHttpClient(String orgId);
-
-    /**
-     * Returns the configured quarantine mode.
-     *
-     * @return Current quarantine mode.
-     */
-    QuarantineMode getQuarantineMode();
 
     /**
      * Returns the script timeout configured for the guard.
@@ -76,11 +46,10 @@ public interface AdaptiveGuardService {
      *
      * @param orgId           Organisation identifier.
      * @param inputBytes      Number of input bytes processed by the script execution.
-     * @param httpBytesIn     Number of bytes retrieved via HTTP calls.
      * @param outputBytes     Number of output bytes produced by the script execution.
-     * @param allocatedBytes  Number of allocated bytes tracked via thread allocation probe. 0 if unsupported.
-     * @param limitBreaches   Number of limit breaches reported for the execution.
+     * @param memoryBytes     Approximate memory allocated/consumed during execution.
+     * @param limitBreached   {@code true} if the execution breached a limit.
+     * @return {@code true} if the tenant should have the login flow blocked.
      */
-    void onFinish(String orgId, long inputBytes, long httpBytesIn, long outputBytes, long allocatedBytes,
-                  int limitBreaches);
+    boolean onFinish(String orgId, long inputBytes, long outputBytes, long memoryBytes, boolean limitBreached);
 }

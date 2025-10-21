@@ -43,7 +43,7 @@ public class ScriptMonitor {
     }
 
     /**
-     * Register a new execution sample and determine whether the organisation should be quarantined.
+     * Register a new execution sample and determine whether the organisation should be blocked.
      *
      * @param orgId Organisation identifier.
      * @param bytes Total bytes consumed by the execution.

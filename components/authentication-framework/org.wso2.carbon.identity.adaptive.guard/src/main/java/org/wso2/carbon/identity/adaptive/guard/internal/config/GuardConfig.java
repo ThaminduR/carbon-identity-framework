@@ -28,42 +28,28 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
  */
 public class GuardConfig {
 
-    public enum QuarantineMode {
-        SKIP_SCRIPT,
-        BLOCK_LOGIN
-    }
-
     private static final Log LOG = LogFactory.getLog(GuardConfig.class);
     private static final String CONFIG_ROOT = "authentication.adaptive.guard";
     private static final String CONFIG_ENABLED = CONFIG_ROOT + ".enabled";
-    private static final String CONFIG_MODE = CONFIG_ROOT + ".mode";
     private static final String CONFIG_BYTES_BUDGET = CONFIG_ROOT + ".bytes_budget_60s";
     private static final String CONFIG_BREACH_BUDGET = CONFIG_ROOT + ".breach_budget_60s";
-    private static final String CONFIG_COOL_OFF = CONFIG_ROOT + ".cool_off_seconds";
     private static final String CONFIG_TIMEOUT = CONFIG_ROOT + ".script_timeout_ms";
-    private static final String CONFIG_HTTP_BODY = CONFIG_ROOT + ".max_http_body_kb";
     private static final String CONFIG_INPUT = CONFIG_ROOT + ".max_script_input_kb";
     private static final String CONFIG_OUTPUT = CONFIG_ROOT + ".max_script_output_kb";
 
     private final boolean enabled;
-    private final QuarantineMode mode;
     private final long bytesBudget;
     private final int breachBudget;
-    private final long coolOffMillis;
     private final long scriptTimeoutMillis;
-    private final int maxHttpBodyKb;
     private final int maxScriptInputKb;
     private final int maxScriptOutputKb;
 
     public GuardConfig() {
 
         enabled = Boolean.parseBoolean(read(CONFIG_ENABLED, "true"));
-        mode = parseMode(read(CONFIG_MODE, "skip_script"));
         bytesBudget = parseSize(read(CONFIG_BYTES_BUDGET, "134217728"));
         breachBudget = (int) parseLong(read(CONFIG_BREACH_BUDGET, "5"));
-        coolOffMillis = parseLong(read(CONFIG_COOL_OFF, "180")) * 1000L;
         scriptTimeoutMillis = parseLong(read(CONFIG_TIMEOUT, "750"));
-        maxHttpBodyKb = (int) parseLong(read(CONFIG_HTTP_BODY, "128"));
         maxScriptInputKb = (int) parseLong(read(CONFIG_INPUT, "32"));
         maxScriptOutputKb = (int) parseLong(read(CONFIG_OUTPUT, "32"));
     }
@@ -75,23 +61,6 @@ public class GuardConfig {
             return defaultValue;
         }
         return value;
-    }
-
-    private QuarantineMode parseMode(String value) {
-
-        if (StringUtils.isBlank(value)) {
-            return QuarantineMode.SKIP_SCRIPT;
-        }
-        switch (value.toLowerCase()) {
-            case "block_login":
-                return QuarantineMode.BLOCK_LOGIN;
-            case "skip_script":
-            default:
-                if (!"skip_script".equalsIgnoreCase(value)) {
-                    LOG.warn("Unknown adaptive guard mode '" + value + "'. Falling back to skip_script.");
-                }
-                return QuarantineMode.SKIP_SCRIPT;
-        }
     }
 
     private long parseSize(String value) {
@@ -131,11 +100,6 @@ public class GuardConfig {
         return enabled;
     }
 
-    public QuarantineMode getMode() {
-
-        return mode;
-    }
-
     public long getBytesBudget() {
 
         return bytesBudget;
@@ -146,19 +110,9 @@ public class GuardConfig {
         return breachBudget;
     }
 
-    public long getCoolOffMillis() {
-
-        return coolOffMillis;
-    }
-
     public long getScriptTimeoutMillis() {
 
         return scriptTimeoutMillis;
-    }
-
-    public int getMaxHttpBodyKb() {
-
-        return maxHttpBodyKb;
     }
 
     public int getMaxScriptInputKb() {

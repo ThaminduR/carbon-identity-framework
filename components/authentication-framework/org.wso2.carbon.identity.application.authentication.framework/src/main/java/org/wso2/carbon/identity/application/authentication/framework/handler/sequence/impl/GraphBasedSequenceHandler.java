@@ -27,7 +27,6 @@ import org.wso2.carbon.identity.application.authentication.framework.AsyncCaller
 import org.wso2.carbon.identity.application.authentication.framework.AsyncProcess;
 import org.wso2.carbon.identity.application.authentication.framework.AsyncReturn;
 import org.wso2.carbon.identity.adaptive.guard.AdaptiveGuardService;
-import org.wso2.carbon.identity.adaptive.guard.AdaptiveGuardService.QuarantineMode;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.config.ConfigurationFacade;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.SequenceConfig;
@@ -130,14 +129,6 @@ public class GraphBasedSequenceHandler extends DefaultStepBasedSequenceHandler i
         AdaptiveGuardService guardService = FrameworkServiceDataHolder.getInstance().getAdaptiveGuardService();
         String organizationId = resolveOrganizationId(context);
         context.setProperty(FrameworkConstants.JSAttributes.JS_GUARD_ORG_ID, organizationId);
-        if (guardService != null && guardService.isEnabled() && guardService.isQuarantined(organizationId)) {
-            if (log.isWarnEnabled()) {
-                log.warn(String.format("Adaptive script execution skipped due to guard quarantine. orgId=%s, tenant=%s, " +
-                        "sp=%s", organizationId, context.getTenantDomain(), context.getServiceProviderName()));
-            }
-            handleQuarantine(request, response, context, guardService, organizationId);
-            return;
-        }
         try {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
@@ -186,16 +177,11 @@ public class GraphBasedSequenceHandler extends DefaultStepBasedSequenceHandler i
                 }
             }
         } catch (AdaptiveScriptGuardException e) {
-            if (guardService != null && guardService.isEnabled()) {
-                if (log.isWarnEnabled()) {
-                    log.warn(String.format("Adaptive script execution aborted by guard. orgId=%s, tenant=%s, sp=%s: %s",
-                            organizationId, context.getTenantDomain(), context.getServiceProviderName(),
-                            e.getMessage()), e);
-                }
-                handleQuarantine(request, response, context, guardService, organizationId);
-                return;
+            if (log.isWarnEnabled()) {
+                log.warn(String.format("Adaptive script execution blocked by guard. orgId=%s, tenant=%s, sp=%s: %s",
+                        organizationId, context.getTenantDomain(), context.getServiceProviderName(), e.getMessage()), e);
             }
-            throw new FrameworkException("Adaptive script guard violation", e);
+            throw new FrameworkException("Adaptive authentication script execution exceeded guard limits", e);
         }
     }
 
@@ -224,17 +210,6 @@ public class GraphBasedSequenceHandler extends DefaultStepBasedSequenceHandler i
                         " from first step.");
             }
         }
-    }
-
-    private void handleQuarantine(HttpServletRequest request, HttpServletResponse response,
-                                  AuthenticationContext context, AdaptiveGuardService guardService, String organizationId)
-            throws FrameworkException {
-
-        if (guardService.getQuarantineMode() == QuarantineMode.BLOCK_LOGIN) {
-            throw new FrameworkException("Adaptive authentication is temporarily disabled for this organization: "
-                    + organizationId);
-        }
-        DefaultStepBasedSequenceHandler.getInstance().handle(request, response, context);
     }
 
     private String resolveOrganizationId(AuthenticationContext context) {

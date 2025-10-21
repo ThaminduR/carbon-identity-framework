@@ -20,10 +20,8 @@ package org.wso2.carbon.identity.adaptive.guard.internal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.adaptive.guard.AdaptiveGuardService;
-import org.wso2.carbon.identity.adaptive.guard.AdaptiveGuardService.QuarantineMode;
-import org.wso2.carbon.identity.adaptive.guard.http.BoundedHttpClient;
-import org.wso2.carbon.identity.adaptive.guard.http.BoundedHttpClientFactory;
 import org.wso2.carbon.identity.adaptive.guard.internal.config.GuardConfig;
 
 /**
@@ -36,8 +34,6 @@ public class AdaptiveGuardServiceImpl implements AdaptiveGuardService {
 
     private final GuardConfig config;
     private final ScriptMonitor monitor;
-    private final QuarantineService quarantineService;
-    private final BoundedHttpClientFactory httpClientFactory;
 
     public AdaptiveGuardServiceImpl() {
 
@@ -48,39 +44,12 @@ public class AdaptiveGuardServiceImpl implements AdaptiveGuardService {
 
         this.config = config;
         this.monitor = new ScriptMonitor(WINDOW_MILLIS, config.getBytesBudget(), config.getBreachBudget());
-        this.quarantineService = new QuarantineService();
-        this.httpClientFactory = new BoundedHttpClientFactory(config.getMaxHttpBodyKb());
     }
 
     @Override
     public boolean isEnabled() {
 
         return config.isEnabled();
-    }
-
-    @Override
-    public boolean isQuarantined(String orgId) {
-
-        if (!config.isEnabled()) {
-            return false;
-        }
-        return quarantineService.isQuarantined(orgId);
-    }
-
-    @Override
-    public BoundedHttpClient getBoundedHttpClient(String orgId) {
-
-        if (!config.isEnabled()) {
-            return httpClientFactory.create(orgId);
-        }
-        return httpClientFactory.create(orgId);
-    }
-
-    @Override
-    public QuarantineMode getQuarantineMode() {
-
-        return config.getMode() == GuardConfig.QuarantineMode.BLOCK_LOGIN ? QuarantineMode.BLOCK_LOGIN :
-                QuarantineMode.SKIP_SCRIPT;
     }
 
     @Override
@@ -102,22 +71,22 @@ public class AdaptiveGuardServiceImpl implements AdaptiveGuardService {
     }
 
     @Override
-    public void onFinish(String orgId, long inputBytes, long httpBytesIn, long outputBytes, long allocatedBytes,
-                         int limitBreaches) {
+    public boolean onFinish(String orgId, long inputBytes, long outputBytes, long memoryBytes, boolean limitBreached) {
 
         if (!config.isEnabled()) {
-            return;
+            return limitBreached;
         }
-        long totalBytes = safeAdd(inputBytes, httpBytesIn, outputBytes, allocatedBytes);
-        boolean tripped = monitor.register(orgId, totalBytes, limitBreaches);
-        if (tripped) {
-            quarantineService.quarantine(orgId, config.getCoolOffMillis());
-            monitor.clear(orgId);
-            if (LOG.isWarnEnabled()) {
-                LOG.warn(String.format("Adaptive guard quarantined org: %s (bytes=%d, breaches=%d)", orgId,
-                        totalBytes, limitBreaches));
-            }
+        if (StringUtils.isBlank(orgId)) {
+            return limitBreached;
         }
+        long totalBytes = safeAdd(inputBytes, outputBytes, memoryBytes);
+        boolean tripped = monitor.register(orgId, totalBytes, limitBreached ? 1 : 0);
+        boolean shouldBlock = limitBreached || tripped;
+        if (shouldBlock && LOG.isWarnEnabled()) {
+            LOG.warn(String.format("Adaptive guard blocked org: %s (bytes=%d, breach=%s)", orgId,
+                    totalBytes, limitBreached));
+        }
+        return shouldBlock;
     }
 
     private long safeAdd(long... values) {
@@ -139,10 +108,5 @@ public class AdaptiveGuardServiceImpl implements AdaptiveGuardService {
     public GuardConfig getConfig() {
 
         return config;
-    }
-
-    public QuarantineService getQuarantineService() {
-
-        return quarantineService;
     }
 }

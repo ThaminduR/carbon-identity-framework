@@ -606,7 +606,7 @@ public class JsGraalGraphBuilder extends JsGraphBuilder {
             boolean monitorStarted = false;
             boolean guardBreach = false;
             boolean success = false;
-            boolean outputLimitBreached = false;
+            ScriptExecutionGuardTracker.GuardResult guardOutcome = null;
             try {
                 currentBuilder.set(graphBuilder);
                 JsGraalGraphBuilderFactory.restoreCurrentContext(authenticationContext, context);
@@ -675,13 +675,18 @@ public class JsGraalGraphBuilder extends JsGraphBuilder {
                 FailNode failNode = new FailNode();
                 attachToLeaf(executingNode, failNode);
             } finally {
-                outputLimitBreached = guardTracker.finish(success, guardBreach, monitorData);
+                guardOutcome = guardTracker.finish(success, guardBreach, monitorData);
                 contextForJs.remove();
                 dynamicallyBuiltBaseNode.remove();
                 clearCurrentBuilder(context);
-                if (outputLimitBreached) {
+                if (guardOutcome != null && guardOutcome.isOutputLimitBreached()) {
                     throw new AdaptiveScriptGuardException(
                             "Adaptive authentication script output exceeded the configured limit");
+                }
+                if (guardOutcome != null && guardOutcome.shouldBlockLogin()
+                        && !guardOutcome.wasGuardExceptionRaised()) {
+                    throw new AdaptiveScriptGuardException(
+                            "Adaptive authentication script execution exceeded configured limits");
                 }
             }
             return result;
