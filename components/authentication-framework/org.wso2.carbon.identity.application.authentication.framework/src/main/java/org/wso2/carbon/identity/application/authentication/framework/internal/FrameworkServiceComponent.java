@@ -34,6 +34,7 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.http.HttpService;
 import org.wso2.carbon.consent.mgt.core.ConsentManager;
+import org.wso2.carbon.identity.adaptive.guard.AdaptiveGuardService;
 import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticator;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
@@ -994,6 +995,23 @@ public class FrameworkServiceComponent {
     protected void unsetMultiAttributeLoginService(MultiAttributeLoginService multiAttributeLogin) {
 
         FrameworkServiceDataHolder.getInstance().setMultiAttributeLoginService(null);
+    }
+
+    @Reference(
+            name = "adaptive.guard.service",
+            service = AdaptiveGuardService.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAdaptiveGuardService"
+    )
+    protected void setAdaptiveGuardService(AdaptiveGuardService adaptiveGuardService) {
+
+        FrameworkServiceDataHolder.getInstance().setAdaptiveGuardService(adaptiveGuardService);
+    }
+
+    protected void unsetAdaptiveGuardService(AdaptiveGuardService adaptiveGuardService) {
+
+        FrameworkServiceDataHolder.getInstance().setAdaptiveGuardService(null);
     }
 
     private AuthenticatorConfig getAuthenticatorConfig(String name) {

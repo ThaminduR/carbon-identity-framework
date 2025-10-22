@@ -634,6 +634,7 @@ public abstract class FrameworkConstants {
         public static final String JS_FUNC_GET_SECRET_BY_NAME = "getSecretByName";
         public static final String JS_AUTH_FAILURE = "fail";
         public static final String JS_ENDPOINT_PARAMS = "endpointParams";
+        public static final String JS_GUARD_ORG_ID = "Adaptive.Auth.Guard.OrgId";
 
         public static final String IDP = "idp";
         public static final String AUTHENTICATOR = "authenticator";

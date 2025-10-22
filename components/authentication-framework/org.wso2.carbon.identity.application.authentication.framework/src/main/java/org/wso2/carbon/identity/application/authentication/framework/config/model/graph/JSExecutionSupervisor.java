@@ -280,7 +280,6 @@ public class JSExecutionSupervisor {
             throwable.setStackTrace(stackTraceElements);
             LOG.warn(warnLog, throwable);
             originalThread.interrupt();
-            originalThread.stop();
 
             // Marking current monitoring task as complete.
             completed(id);
