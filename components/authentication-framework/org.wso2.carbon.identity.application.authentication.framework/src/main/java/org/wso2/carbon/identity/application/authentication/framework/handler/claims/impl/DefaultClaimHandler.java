@@ -1385,7 +1385,7 @@ public class DefaultClaimHandler implements ClaimHandler {
         if (IdentityUtil.getPrimaryDomainName().equals(userStoreDomain)) {
             return;
         }
-        String domainPrefix = userStoreDomain+ "/";
+        String domainPrefix = userStoreDomain + "/";
         String[] groups = mappedAttrs.get(UserCoreConstants.USER_STORE_GROUPS_CLAIM)
                 .split(Pattern.quote(FrameworkUtils.getMultiAttributeSeparator()));
 
