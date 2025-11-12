@@ -18,9 +18,12 @@
 
 package org.wso2.carbon.identity.workflow.mgt.dao;
 
+import org.mockito.MockedStatic;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.workflow.mgt.bean.Parameter;
@@ -30,6 +33,9 @@ import org.wso2.carbon.identity.workflow.mgt.exception.InternalWorkflowException
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
@@ -55,7 +61,9 @@ public class WorkflowDAOTest {
     private Workflow testWorkflow;
     private Workflow testWorkflow2;
     private WorkflowDAO workflowDAO;
-    
+
+    private MockedStatic<PrivilegedCarbonContext> privilegedCarbonContext;
+
     @BeforeClass
     public void initTest() {
         workflowDAO = new WorkflowDAO();
@@ -73,6 +81,12 @@ public class WorkflowDAOTest {
         testWorkflow2.setWorkflowDescription(WORKFLOW_DESCRIPTION);
         testWorkflow2.setTemplateId(TEMPLATE_ID);
         testWorkflow2.setWorkflowImplId(WORKFLOW_IMPL_ID);
+    }
+
+    @BeforeMethod
+    public void setupBeforeTest() {
+
+        mockCarbonContextForTenant(TENANT_ID);
     }
     
     @AfterMethod
@@ -97,6 +111,10 @@ public class WorkflowDAOTest {
             workflowDAO.removeWorkflows(SECOND_TENANT_ID);
         } catch (InternalWorkflowException e) {
             // Ignore if workflows don't exist
+        }
+
+        if (privilegedCarbonContext != null && !privilegedCarbonContext.isClosed()) {
+            privilegedCarbonContext.close();
         }
     }
     
@@ -236,15 +254,20 @@ public class WorkflowDAOTest {
         // Verify workflows exist
         assertNotNull(workflowDAO.getWorkflow(WORKFLOW_ID));
         assertNotNull(workflowDAO.getWorkflow(WORKFLOW_ID_2));
-        assertNotNull(workflowDAO.getWorkflow("workflow-3"));
-        
+
+        // Workflows in other tenant cannot be accessed.
+        assertNull(workflowDAO.getWorkflow("workflow-3"));
+
         // Remove workflows for one tenant
         workflowDAO.removeWorkflows(TENANT_ID);
         
         // Verify workflows for the tenant are removed
         assertNull(workflowDAO.getWorkflow(WORKFLOW_ID));
         assertNull(workflowDAO.getWorkflow(WORKFLOW_ID_2));
-        
+
+        // Set tenant context as SECOND_TENANT_ID.
+        mockCarbonContextForTenant(SECOND_TENANT_ID);
+
         // Verify workflow for other tenant still exists
         assertNotNull(workflowDAO.getWorkflow("workflow-3"));
         
@@ -454,5 +477,17 @@ public class WorkflowDAOTest {
         
         // Clean up
         workflowDAO.removeWorkflow("workflow-3");
+    }
+
+    private void mockCarbonContextForTenant(int tenantId) {
+
+        if (privilegedCarbonContext != null && !privilegedCarbonContext.isClosed()) {
+            privilegedCarbonContext.close();
+        }
+        privilegedCarbonContext = mockStatic(PrivilegedCarbonContext.class);
+        PrivilegedCarbonContext mockPrivilegedCarbonContext = mock(PrivilegedCarbonContext.class);
+        privilegedCarbonContext.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
+                .thenReturn(mockPrivilegedCarbonContext);
+        when(mockPrivilegedCarbonContext.getTenantId()).thenReturn(tenantId);
     }
 }
