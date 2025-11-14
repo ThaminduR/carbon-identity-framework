@@ -2907,5 +2907,6 @@
             </Custom>
         </SMS>
     </NotificationChannel>
+    <PASTRCookieMaxAge>-1</PASTRCookieMaxAge>
 
 </Server>
