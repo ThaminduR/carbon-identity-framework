@@ -124,7 +124,7 @@ public class IdentityKeyStoreGeneratorImpl implements IdentityKeyStoreGenerator 
     private boolean isContextKeyStoreExists(String context, String tenantDomain, KeyStoreManager keyStoreManager)
             throws KeyStoreManagementException {
 
-        String keyStoreName = KeystoreUtils.getKeyStoreFileLocation(buildDomainWithContext(tenantDomain, context));
+        String keyStoreName = KeystoreUtils.getKeyStoreFileLocation(context, tenantDomain);
         boolean isKeyStoreExists = false;
         try {
             keyStoreManager.getKeyStore(keyStoreName);
