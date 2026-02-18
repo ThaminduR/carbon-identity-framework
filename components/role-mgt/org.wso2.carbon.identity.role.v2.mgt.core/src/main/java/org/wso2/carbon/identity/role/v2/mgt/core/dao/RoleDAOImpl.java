@@ -1036,6 +1036,7 @@ public class RoleDAOImpl implements RoleDAO {
         return role;
     }
 
+    @Deprecated
     @Override
     public void addMainRoleToSharedRoleRelationship(String mainRoleUUID, String sharedRoleUUID,
                                                     String mainRoleTenantDomain, String sharedRoleTenantDomain)

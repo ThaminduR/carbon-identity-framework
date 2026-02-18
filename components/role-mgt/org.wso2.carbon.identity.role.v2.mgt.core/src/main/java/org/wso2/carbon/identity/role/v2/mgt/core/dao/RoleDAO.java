@@ -362,7 +362,9 @@ public interface RoleDAO {
      * @param mainRoleTenantDomain   Main role tenant domain.
      * @param sharedRoleTenantDomain Shared role tenant domain.
      * @throws IdentityRoleManagementException Error occurred while adding shared role to main role relationship.
+     * @deprecated use {@link #addMainRoleToSharedRoleRelationship(int, int, String, String, String)} instead.
      */
+    @Deprecated
     void addMainRoleToSharedRoleRelationship(String mainRoleUUID, String sharedRoleUUID, String mainRoleTenantDomain,
                                              String sharedRoleTenantDomain)
             throws IdentityRoleManagementException;
