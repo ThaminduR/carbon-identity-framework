@@ -2654,6 +2654,7 @@
                     <Path>/api/users/v1/offline-invite-link</Path>
                     <Path>/api/server/v1/validation-rules</Path>
                     <Path>/api/users/v1/me/push/devices</Path>
+                    <Path>/api/users/v1/me/change-password</Path>
                 </SubPaths>
             </Context>
             <Context>
