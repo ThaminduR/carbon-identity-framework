@@ -56,6 +56,8 @@ public class WorkFlowRuleEvaluationDataProvider implements RuleEvaluationDataPro
     private static final Log log = LogFactory.getLog(WorkFlowRuleEvaluationDataProvider.class);
 
     private static final String WSO2_CLAIM_URI_PREFIX = "http://wso2.org/claims/";
+    private static final String USER_CLAIM_FIELD_PREFIX = "user.";
+    private static final String USER_CLAIM_FIELD_URI_PREFIX = USER_CLAIM_FIELD_PREFIX + WSO2_CLAIM_URI_PREFIX;
     private static final String USER_STORE_DOMAIN = "User Store Domain";
     private static final String USERS_TO_BE_ASSIGNED = "Users to be Added";
     private static final String USERS_TO_BE_UNASSIGNED = "Users to be Deleted";
@@ -118,14 +120,14 @@ public class WorkFlowRuleEvaluationDataProvider implements RuleEvaluationDataPro
     }
 
     /**
-     * Check if a field name is a claim URI.
+     * Check if a field name represents a user claim field.
      *
      * @param fieldName Field name to check.
-     * @return True if the field name is a claim URI.
+     * @return True if the field name is a user claim field.
      */
-    private boolean isClaimUri(String fieldName) {
+    private boolean isUserClaimField(String fieldName) {
 
-        return fieldName != null && fieldName.startsWith(WSO2_CLAIM_URI_PREFIX);
+        return fieldName != null && fieldName.startsWith(USER_CLAIM_FIELD_URI_PREFIX);
     }
 
     @Override
@@ -148,7 +150,7 @@ public class WorkFlowRuleEvaluationDataProvider implements RuleEvaluationDataPro
         List<Field> claimFields = new ArrayList<>();
         List<Field> nonClaimFields = new ArrayList<>();
         for (Field field : ruleEvaluationContext.getFields()) {
-            if (isClaimUri(field.getName())) {
+            if (isUserClaimField(field.getName())) {
                 claimFields.add(field);
             } else {
                 nonClaimFields.add(field);
@@ -224,25 +226,25 @@ public class WorkFlowRuleEvaluationDataProvider implements RuleEvaluationDataPro
 
         switch (ruleField) {
             case USER_DOMAIN:
-                addUserDomainFieldValue(fieldValues, field, contextData);
+                resolveUserDomainField(fieldValues, field, contextData);
                 break;
             case USER_GROUPS:
-                addUserGroupsFieldValue(fieldValues, field, contextData, tenantDomain);
+                resolveUserGroupsField(fieldValues, field, contextData, tenantDomain);
                 break;
             case USER_ROLES:
-                addUserRolesFieldValue(fieldValues, field, contextData, tenantDomain);
+                resolveUserRolesField(fieldValues, field, contextData, tenantDomain);
                 break;
             case ROLE_AUDIENCE:
-                addRoleAudienceIdFieldValue(fieldValues, field, contextData, tenantDomain);
+                resolveRoleAudienceIdField(fieldValues, field, contextData, tenantDomain);
                 break;
             case ROLE_ID:
-                addRoleIdFieldValue(fieldValues, field, contextData);
+                resolveRoleIdField(fieldValues, field, contextData);
                 break;
             case ROLE_HAS_ASSIGNED_USERS:
-                addRoleHasAssignedUsersFieldValue(fieldValues, field, contextData);
+                resolveRoleHasAssignedUsersField(fieldValues, field, contextData);
                 break;
             case ROLE_HAS_UNASSIGNED_USERS:
-                addRoleHasUnassignedUsersFieldValue(fieldValues, field, contextData);
+                resolveRoleHasUnassignedUsersField(fieldValues, field, contextData);
                 break;
             default:
                 throw new RuleEvaluationDataProviderException(
@@ -251,9 +253,9 @@ public class WorkFlowRuleEvaluationDataProvider implements RuleEvaluationDataPro
     }
 
     /**
-     * Add user domain field value from context data.
+     * Resolve user domain field value from context data.
      */
-    private void addUserDomainFieldValue(List<FieldValue> fieldValues, Field field, Map<String, Object> contextData) {
+    private void resolveUserDomainField(List<FieldValue> fieldValues, Field field, Map<String, Object> contextData) {
 
         String userStoreDomain = (String) contextData.get(USER_STORE_DOMAIN);
         fieldValues.add(new FieldValue(field.getName(),
@@ -261,9 +263,9 @@ public class WorkFlowRuleEvaluationDataProvider implements RuleEvaluationDataPro
     }
 
     /**
-     * Add role ID field value from context data.
+     * Resolve role ID field value from context data.
      */
-    private void addRoleIdFieldValue(List<FieldValue> fieldValues, Field field, Map<String, Object> contextData) {
+    private void resolveRoleIdField(List<FieldValue> fieldValues, Field field, Map<String, Object> contextData) {
 
         String roleId = (String) contextData.get(ROLE_ID);
         fieldValues.add(new FieldValue(field.getName(),
@@ -271,10 +273,10 @@ public class WorkFlowRuleEvaluationDataProvider implements RuleEvaluationDataPro
     }
 
     /**
-     * Add user role field value from context data or fetch from user store.
+     * Resolve user roles field value from context data or fetch from user store.
      * Retrieves role IDs (not role names) to match against rule expressions.
      */
-    private void addUserRolesFieldValue(List<FieldValue> fieldValues, Field field, Map<String, Object> contextData,
+    private void resolveUserRolesField(List<FieldValue> fieldValues, Field field, Map<String, Object> contextData,
                                        String tenantDomain) throws RuleEvaluationDataProviderException {
 
         String username = (String) contextData.get(USERNAME);
@@ -307,9 +309,9 @@ public class WorkFlowRuleEvaluationDataProvider implements RuleEvaluationDataPro
     }
 
     /**
-     * Add user groups field value from context data or fetch from user store.
+     * Resolve user groups field value from context data or fetch from user store.
      */
-    private void addUserGroupsFieldValue(List<FieldValue> fieldValues, Field field, Map<String, Object> contextData,
+    private void resolveUserGroupsField(List<FieldValue> fieldValues, Field field, Map<String, Object> contextData,
                                         String tenantDomain) throws RuleEvaluationDataProviderException {
 
         String username = (String) contextData.get(USERNAME);
@@ -363,7 +365,7 @@ public class WorkFlowRuleEvaluationDataProvider implements RuleEvaluationDataPro
 
         // Check context data and collect claims to fetch.
         for (Field field : claimFields) {
-            String claimUri = field.getName();
+            String claimUri = field.getName().substring(USER_CLAIM_FIELD_PREFIX.length());
             if (claimValueMap.containsKey(claimUri)) {
                 continue;
             }
@@ -403,7 +405,7 @@ public class WorkFlowRuleEvaluationDataProvider implements RuleEvaluationDataPro
             }
         }
         for (Field field : claimFields) {
-            String claimUri = field.getName();
+            String claimUri = field.getName().substring(USER_CLAIM_FIELD_PREFIX.length());
             String claimValue = claimValueMap.get(claimUri);
             fieldValues.add(new FieldValue(field.getName(),
                     StringUtils.isNotBlank(claimValue) ? claimValue : null, ValueType.STRING));
@@ -411,9 +413,9 @@ public class WorkFlowRuleEvaluationDataProvider implements RuleEvaluationDataPro
     }
 
     /**
-     * Add role audience ID field value by fetching from role management service.
+     * Resolve role audience ID field value by fetching from role management service.
      */
-    private void addRoleAudienceIdFieldValue(List<FieldValue> fieldValues, Field field, Map<String, Object> contextData,
+    private void resolveRoleAudienceIdField(List<FieldValue> fieldValues, Field field, Map<String, Object> contextData,
                                             String tenantDomain) throws RuleEvaluationDataProviderException {
 
         // First check if role audience ID is already available in context data.
@@ -447,15 +449,15 @@ public class WorkFlowRuleEvaluationDataProvider implements RuleEvaluationDataPro
         fieldValues.add(new FieldValue(field.getName(), audienceId, ValueType.REFERENCE));
     }
 
-     /**
-     * Add role has assigned users field value from context data.
+    /**
+     * Resolve role has assigned users field value from context data.
      * Checks if the "Users to be Assigned" list in context data is non-empty.
      *
      * @param fieldValues List of field values to add to.
      * @param field       Field being processed.
      * @param contextData Context data from the flow context.
      */
-    private void addRoleHasAssignedUsersFieldValue(List<FieldValue> fieldValues, Field field,
+    private void resolveRoleHasAssignedUsersField(List<FieldValue> fieldValues, Field field,
                                                    Map<String, Object> contextData) {
 
         List<?> usersToBeAssigned = (List<?>) contextData.get(USERS_TO_BE_ASSIGNED);
@@ -469,14 +471,14 @@ public class WorkFlowRuleEvaluationDataProvider implements RuleEvaluationDataPro
     }
 
     /**
-     * Add role has unassigned users field value from context data.
+     * Resolve role has unassigned users field value from context data.
      * Checks if the "Users to be Unassigned" list in context data is non-empty.
      *
      * @param fieldValues List of field values to add to.
      * @param field       Field being processed.
      * @param contextData Context data from the flow context.
      */
-    private void addRoleHasUnassignedUsersFieldValue(List<FieldValue> fieldValues, Field field,
+    private void resolveRoleHasUnassignedUsersField(List<FieldValue> fieldValues, Field field,
                                                      Map<String, Object> contextData) {
 
         List<?> usersToBeUnassigned = (List<?>) contextData.get(USERS_TO_BE_UNASSIGNED);
