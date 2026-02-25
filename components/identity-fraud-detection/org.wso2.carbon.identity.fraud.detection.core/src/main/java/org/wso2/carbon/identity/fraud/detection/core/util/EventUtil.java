@@ -182,11 +182,11 @@ public class EventUtil {
                     responseDTO.getErrorReason() : "Unknown";
             resultMessage = "Error occurred while processing the request to the fraud detector: " + fraudDetectorName
                     + ". Event name: " + eventName + ". Error Type: " + errorType + ". Error Reason: " + errorReason;
-            LOG.error(resultMessage);
+            LOG.debug(resultMessage);
         } else if (FAILURE.equals(responseDTO.getStatus())) {
             resultMessage = "Request to the fraud detector: " + fraudDetectorName + " failed."
                     + " Event name: " + eventName;
-            LOG.error(resultMessage);
+            LOG.debug(resultMessage);
         }
 
         publishDiagnosticLogOnResponse(resultStatus, resultMessage, fraudDetectorName, eventName);
