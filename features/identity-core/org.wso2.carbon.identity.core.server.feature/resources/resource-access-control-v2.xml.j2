@@ -902,6 +902,16 @@
             <Scopes>internal_approval_task_update</Scopes>
         </Resource>
 
+        <!-- [Organization] User Password Update API -->
+        <Resource context="(.*)/o/api/users/v1/me/change-password" secured="true" http-method="POST">
+            <Scopes>internal_org_user_password_update</Scopes>
+        </Resource>
+        
+        <!-- User Password Update API -->
+        <Resource context="(.*)/api/users/v1/me/change-password" secured="true" http-method="POST">
+            <Scopes>internal_user_password_update</Scopes>
+        </Resource>
+
         <!-- Me APIs -->
         <Resource context="(.*)/api/server/v1/configs/home-realm-identifiers" secured="true" http-method="GET">
             <Scopes>internal_login</Scopes>
