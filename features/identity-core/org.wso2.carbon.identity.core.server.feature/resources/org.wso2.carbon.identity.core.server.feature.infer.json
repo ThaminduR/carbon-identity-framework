@@ -322,6 +322,7 @@
       "identity_mgt.recovery.enable_normalized_retry_error_response": false,
       "outbound_provisioning_management.enable_scim_patch_for_updates": false,
       "outbound_provisioning_management.confidential_data_protection_enabled": false,
+      "identity_mgt.password_update.preserve_logged_in_session_for_all_bindings": false,
       "scim2.enable_spec_compliant_email_handling": false
     },
     "IS_7.1.0": {
@@ -376,6 +377,7 @@
       "identity_mgt.recovery.enable_normalized_retry_error_response": false,
       "outbound_provisioning_management.enable_scim_patch_for_updates": false,
       "outbound_provisioning_management.confidential_data_protection_enabled": false,
+      "identity_mgt.password_update.preserve_logged_in_session_for_all_bindings": false,
       "scim2.enable_spec_compliant_email_handling": false
     },
     "IS_7.2.0": {
@@ -391,6 +393,7 @@
       "identity_mgt.recovery.enable_normalized_retry_error_response": false,
       "outbound_provisioning_management.enable_scim_patch_for_updates": false,
       "outbound_provisioning_management.confidential_data_protection_enabled": false,
+      "identity_mgt.password_update.preserve_logged_in_session_for_all_bindings": false,
       "scim2.enable_spec_compliant_email_handling": false
     }
   }
