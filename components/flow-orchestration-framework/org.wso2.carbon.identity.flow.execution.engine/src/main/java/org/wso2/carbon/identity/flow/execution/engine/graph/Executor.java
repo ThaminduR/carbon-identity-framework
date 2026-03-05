@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.flow.execution.engine.graph;
 import org.wso2.carbon.identity.flow.execution.engine.exception.FlowEngineException;
 import org.wso2.carbon.identity.flow.execution.engine.model.ExecutorResponse;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
+import org.wso2.carbon.identity.flow.mgt.model.ExecutorDTO;
 
 import java.util.List;
 
@@ -35,6 +36,19 @@ public interface Executor {
      * @return Name of the executor.
      */
     String getName();
+
+    /**
+     * Prepare the flow execution context before executor invocation.
+     * Default implementation is a no-op. Executors that require context
+     * setup (e.g. resolving IDP configurations) should override this method.
+     *
+     * @param context     Flow execution context.
+     * @param executorDTO Executor configuration and metadata.
+     * @throws FlowEngineException If an error occurs during context preparation.
+     */
+    default void prepareContext(FlowExecutionContext context, ExecutorDTO executorDTO) throws FlowEngineException {
+
+    }
 
     /**
      * Execute the logic of the executor.

@@ -378,7 +378,6 @@ public class TaskExecutionNodeTest {
             when(idpManager.getIdPByName("validIdp", TENANT_DOMAIN)).thenReturn(idp);
 
             taskExecutionNode.execute(context, nodeConfig);
-            assertNotNull(context.getExternalIdPConfig());
             assertNotNull(context.getAuthenticatorProperties());
             assertEquals(context.getAuthenticatorProperties().size(), 1);
             assertEquals(context.getAuthenticatorProperties().get("property1"), "value1");
@@ -433,7 +432,7 @@ public class TaskExecutionNodeTest {
 
         when(executor.execute(any())).thenReturn(executorResponse);
         when(executor.getName()).thenReturn(TEST_EXECUTOR);
-        doCallRealMethod().when(executor).addIdpConfigsToContext(any(), any());
+        doCallRealMethod().when(executor).prepareContext(any(), any());
 
         MockedStatic<FlowExecutionEngineDataHolder> mocked = mockStatic(FlowExecutionEngineDataHolder.class);
         FlowExecutionEngineDataHolder dataHolder = mock(FlowExecutionEngineDataHolder.class);

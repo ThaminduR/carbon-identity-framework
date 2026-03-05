@@ -110,10 +110,7 @@ public class TaskExecutionNode implements Node {
         Executor mappedFlowExecutor = resolveExecutor(context.getFlowType(), configs, context.getGraphConfig().getId(),
                 context.getTenantDomain());
 
-        if (mappedFlowExecutor instanceof AuthenticationExecutor) {
-            ((AuthenticationExecutor) mappedFlowExecutor).addIdpConfigsToContext(context, configs.getExecutorConfig());
-        }
-
+        mappedFlowExecutor.prepareContext(context, configs.getExecutorConfig());
         ExecutorResponse response = mappedFlowExecutor.execute(context);
         if (response == null) {
             throw handleServerException(context.getFlowType(), ERROR_CODE_EXECUTOR_FAILURE,

@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.flow.execution.engine.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.slf4j.MDC;
-import org.wso2.carbon.identity.application.authentication.framework.config.model.ExternalIdPConfig;
 import org.wso2.carbon.identity.flow.mgt.model.GraphConfig;
 import org.wso2.carbon.identity.flow.mgt.model.NodeConfig;
 
@@ -56,8 +55,6 @@ public class FlowExecutionContext implements Serializable {
     private String portalUrl;
     private String applicationId;
     private String flowType;
-    @JsonIgnore
-    private ExternalIdPConfig externalIdPConfig;
     private boolean generateAuthenticationAssertion = false;
 
     public NodeConfig getCurrentNode() {
@@ -173,17 +170,6 @@ public class FlowExecutionContext implements Serializable {
     public void setAuthenticatorProperties(Map<String, String> authenticatorProperties) {
 
         this.authenticatorProperties = authenticatorProperties;
-    }
-
-    public ExternalIdPConfig getExternalIdPConfig() {
-
-        return externalIdPConfig;
-    }
-
-    public void setExternalIdPConfig(
-            ExternalIdPConfig externalIdPConfig) {
-
-        this.externalIdPConfig = externalIdPConfig;
     }
 
     public Map<String, Set<String>> getCurrentStepInputs() {

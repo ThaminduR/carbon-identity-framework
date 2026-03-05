@@ -18,11 +18,10 @@
 
 package org.wso2.carbon.identity.flow.execution.engine.graph;
 
-import org.wso2.carbon.identity.application.authentication.framework.config.model.ExternalIdPConfig;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
-import org.wso2.carbon.identity.flow.execution.engine.exception.FlowEngineServerException;
+import org.wso2.carbon.identity.flow.execution.engine.exception.FlowEngineException;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
 import org.wso2.carbon.identity.flow.mgt.model.ExecutorDTO;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
@@ -48,21 +47,21 @@ public abstract class AuthenticationExecutor implements Executor {
     public abstract String getAMRValue();
 
     /**
-     * Add Identity Provider configurations to the flow execution context.
+     * Resolves Identity Provider configurations and populates authenticator properties in the context.
+     * Executors that do not require an IDP (i.e. no {@code idpName} in metadata) are unaffected.
      *
-     * @param context      Flow execution context.
-     * @param executorDTO  Executor data transfer object containing metadata.
-     * @throws FlowEngineServerException If an error occurs while retrieving the Identity Provider configuration.
+     * @param context     Flow execution context.
+     * @param executorDTO Executor configuration and metadata.
+     * @throws FlowEngineException If an error occurs while retrieving the Identity Provider configuration.
      */
-    public void addIdpConfigsToContext(FlowExecutionContext context, ExecutorDTO executorDTO)
-            throws FlowEngineServerException {
+    @Override
+    public void prepareContext(FlowExecutionContext context, ExecutorDTO executorDTO) throws FlowEngineException {
 
-        String tenantDomain = context.getTenantDomain();
-        Map<String, String> propertyMap = new HashMap<>();
         Map<String, String> metadata = executorDTO.getMetadata();
         if (metadata == null || !metadata.containsKey(IDP_NAME)) {
             return;
         }
+        String tenantDomain = context.getTenantDomain();
         String idpName = metadata.get(IDP_NAME);
         try {
             IdentityProvider idp =
@@ -72,11 +71,11 @@ public abstract class AuthenticationExecutor implements Executor {
                         tenantDomain);
             }
             FederatedAuthenticatorConfig authenticatorConfig = idp.getDefaultAuthenticatorConfig();
+            Map<String, String> propertyMap = new HashMap<>();
             for (Property property : authenticatorConfig.getProperties()) {
                 propertyMap.put(property.getName(), property.getValue());
             }
             context.setAuthenticatorProperties(propertyMap);
-            context.setExternalIdPConfig(new ExternalIdPConfig(idp));
         } catch (IdentityProviderManagementException e) {
             throw handleServerException(context.getFlowType(), ERROR_CODE_GET_IDP_CONFIG_FAILURE, e, idpName,
                     tenantDomain);

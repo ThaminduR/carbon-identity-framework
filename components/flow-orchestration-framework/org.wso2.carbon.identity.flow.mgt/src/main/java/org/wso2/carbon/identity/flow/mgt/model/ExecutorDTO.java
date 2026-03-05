@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.flow.mgt.model;
 
+import org.wso2.carbon.identity.flow.mgt.Constants;
+
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -85,7 +87,7 @@ public class ExecutorDTO implements Serializable {
         if (metadata == null) {
             metadata = new HashMap<>();
         }
-        metadata.put("idpName", idpName);
+        metadata.put(Constants.IDP_NAME, idpName);
     }
 
     /**
