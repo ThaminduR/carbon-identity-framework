@@ -1303,7 +1303,7 @@ public class DefaultStepHandler implements StepHandler {
                     // Construct retryParam with auth failure message for API based auth flows if user is locked.
                     if (FrameworkUtils.isAPIBasedAuthenticationFlow(request)
                             && Boolean.parseBoolean(IdentityUtil.getProperty(
-                                    FrameworkConstants.ADD_AUTH_FAILURE_REASON_TO_REDIRECT_URL))) {
+                                    FrameworkConstants.INCLUDE_AUTH_FAILURE_REASON_IN_API_BASED_AUTH_RESPONSE))) {
                         // Set user account lock message for authFailureMsg if authFailure is true.
                         if (!StringUtils.contains(retryParam, "authFailureMsg")) {
                             if (StringUtils.contains(retryParam, "authFailure=true")) {
@@ -1419,7 +1419,7 @@ public class DefaultStepHandler implements StepHandler {
                     }
                     // Construct retryParam with auth failure message for API based auth flows if user is locked.
                     if (FrameworkUtils.isAPIBasedAuthenticationFlow(request) && Boolean.parseBoolean(
-                            IdentityUtil.getProperty(FrameworkConstants.ADD_AUTH_FAILURE_REASON_TO_REDIRECT_URL))) {
+                            IdentityUtil.getProperty(FrameworkConstants.INCLUDE_AUTH_FAILURE_REASON_IN_API_BASED_AUTH_RESPONSE))) {
                         // Set user account lock message for authFailureMsg if authFailure is true.
                         if (!StringUtils.contains(retryParam, "authFailureMsg")) {
                             if (StringUtils.contains(retryParam, "authFailure=true")) {
