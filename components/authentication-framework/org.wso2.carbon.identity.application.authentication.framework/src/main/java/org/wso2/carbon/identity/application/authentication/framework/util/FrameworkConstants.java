@@ -176,7 +176,8 @@ public abstract class FrameworkConstants {
     public static final String CONFIG_ALLOW_SP_REQUESTED_FED_CLAIMS_ONLY = "AllowSPRequestedFedClaimsOnly";
     public static final String INCLUDE_AUTH_FAILURE_REASON_IN_API_BASED_AUTH_RESPONSE =
             "IncludeAuthFailureReasonInAPIBasedAuthResponse";
-    public static final String INCLUDE_MULTI_OPTIONS_IN_API_BASED_RESPONSE = "IncludeMultiOptionsInAPIBasedAuthResponse";
+    public static final String INCLUDE_MULTI_OPTIONS_IN_API_BASED_RESPONSE =
+            "IncludeMultiOptionsInAPIBasedAuthResponse";
 
     public static final String REMEMBER_ME_OPT_ON = "on";
     public static final String LAST_FAILED_AUTHENTICATOR = "LastFailedAuthenticator";
