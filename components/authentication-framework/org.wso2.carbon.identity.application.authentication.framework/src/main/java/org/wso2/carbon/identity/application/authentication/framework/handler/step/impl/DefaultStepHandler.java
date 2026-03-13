@@ -1300,6 +1300,22 @@ public class DefaultStepHandler implements StepHandler {
                     } else {
                         baseURL = loginPage;
                     }
+                    // Construct retryParam with auth failure message for API based auth flows if user is locked.
+                    if (FrameworkUtils.isAPIBasedAuthenticationFlow(request)
+                            && Boolean.parseBoolean(IdentityUtil.getProperty(
+                                    FrameworkConstants.ADD_AUTH_FAILURE_REASON_TO_REDIRECT_URL))) {
+                        // Set user account lock message for authFailureMsg if authFailure is true.
+                        if (!StringUtils.contains(retryParam, "authFailureMsg")) {
+                            if (StringUtils.contains(retryParam, "authFailure=true")) {
+                                retryParam = retryParam + "&authFailureMsg=user.account.locked";
+                            } else {
+                                retryParam = retryParam + "&authFailure=true&authFailureMsg=user.account.locked";
+                            }
+                        } else {
+                            retryParam = retryParam.replaceFirst("authFailureMsg=[^&]*",
+                                    "authFailureMsg=user.account.locked");
+                        }
+                    }
                     redirectURL = response.encodeRedirectURL(baseURL
                             + ("?" + context.getContextIdIncludedQueryParams()))
                             + String.format(
@@ -1400,6 +1416,21 @@ public class DefaultStepHandler implements StepHandler {
                         return response.encodeRedirectURL(retryPage
                                 + ("?" + context.getContextIdIncludedQueryParams()))
                                 + errorParamString;
+                    }
+                    // Construct retryParam with auth failure message for API based auth flows if user is locked.
+                    if (FrameworkUtils.isAPIBasedAuthenticationFlow(request) && Boolean.parseBoolean(
+                            IdentityUtil.getProperty(FrameworkConstants.ADD_AUTH_FAILURE_REASON_TO_REDIRECT_URL))) {
+                        // Set user account lock message for authFailureMsg if authFailure is true.
+                        if (!StringUtils.contains(retryParam, "authFailureMsg")) {
+                            if (StringUtils.contains(retryParam, "authFailure=true")) {
+                                retryParam = retryParam + "&authFailureMsg=user.account.locked";
+                            } else {
+                                retryParam = retryParam + "&authFailure=true&authFailureMsg=user.account.locked";
+                            }
+                        } else {
+                            retryParam = retryParam.replaceFirst("authFailureMsg=[^&]*",
+                                    "authFailureMsg=user.account.locked");
+                        }
                     }
                 }
                 return response.encodeRedirectURL(loginPage + ("?" + context.getContextIdIncludedQueryParams())) +
