@@ -58,6 +58,7 @@ import java.util.List;
 import javax.sql.DataSource;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -89,6 +90,7 @@ import static org.wso2.carbon.identity.configuration.mgt.core.util.TestUtils.get
 import static org.wso2.carbon.identity.configuration.mgt.core.util.TestUtils.getSampleAttribute3;
 import static org.wso2.carbon.identity.configuration.mgt.core.util.TestUtils.getSampleResource1Add;
 import static org.wso2.carbon.identity.configuration.mgt.core.util.TestUtils.getSampleResource2Add;
+import static org.wso2.carbon.identity.configuration.mgt.core.util.TestUtils.getSampleResource3Add;
 import static org.wso2.carbon.identity.configuration.mgt.core.util.TestUtils.getSampleResourceType2Add;
 import static org.wso2.carbon.identity.configuration.mgt.core.util.TestUtils.getSampleResourceTypeAdd;
 import static org.wso2.carbon.identity.configuration.mgt.core.util.TestUtils.getSampleSearchCondition;
@@ -244,6 +246,7 @@ public class ConfigurationManagerTest {
 
         Resource resource = configurationManager.addResource(resourceType.getName(), resourceTypeAdd);
         assertNotNull(resource.getResourceId(), "Created resource type id cannot be null");
+        assertTrue(resource.isHasAttribute());
     }
 
     @Test(priority = 10, expectedExceptions = ConfigurationManagementClientException.class)
@@ -522,7 +525,7 @@ public class ConfigurationManagerTest {
                 resource.getResourceName(), "sample-resource-file", fileStream);
 
         configurationManager.deleteFileById(resourceType.getName(), resource.getResourceName(), resourceFile.getId());
-        Assert.assertFalse(
+        assertFalse(
                 "Resource should not contain any files.",
                 configurationManager.getResource(resourceType.getName(), resource.getResourceName()).isHasFile()
         );
@@ -577,7 +580,7 @@ public class ConfigurationManagerTest {
         configurationManager.deleteFiles(
                 resourceType.getName(), resource.getResourceName());
 
-        Assert.assertFalse(
+        assertFalse(
                 "Resource should not contain any files.",
                 configurationManager.getResource(resourceType.getName(), resource.getResourceName()).isHasFile()
         );
@@ -694,6 +697,16 @@ public class ConfigurationManagerTest {
         verify(orgResourceResolverService, times(1)).getResourcesFromOrgHierarchy(
                 eq(TEST_ORG_ID), any(), any());
         Assert.assertNotNull(returnedResource);
+    }
+
+    @Test(priority = 37)
+    public void testAddResourceWithoutAttributes() throws Exception {
+
+        ResourceType resourceType = configurationManager.addResourceType(getSampleResourceTypeAdd());
+        ResourceAdd resourceTypeAdd = getSampleResource3Add();
+
+        Resource resource = configurationManager.addResource(resourceType.getName(), resourceTypeAdd);
+        assertFalse(resource.isHasAttribute());
     }
 
     private void removeCreatedTimeColumn() throws DataAccessException {
