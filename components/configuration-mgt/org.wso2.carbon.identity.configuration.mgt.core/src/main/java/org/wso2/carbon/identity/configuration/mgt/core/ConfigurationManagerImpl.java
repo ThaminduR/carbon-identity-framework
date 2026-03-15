@@ -663,7 +663,13 @@ public class ConfigurationManagerImpl implements ConfigurationManager {
         resource.setTenantDomain(getTenantDomain());
         resource.setResourceName(resourceAdd.getName());
         resource.setResourceType(resourceTypeName);
-        resource.setAttributes(resourceAdd.getAttributes());
+
+        List<Attribute> attributes = resourceAdd.getAttributes();
+        resource.setAttributes(attributes);
+
+        if (attributes != null && !attributes.isEmpty()) {
+            resource.setHasAttribute(true);
+        }
         return resource;
     }
 
