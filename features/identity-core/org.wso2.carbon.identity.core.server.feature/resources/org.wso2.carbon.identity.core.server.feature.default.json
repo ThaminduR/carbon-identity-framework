@@ -6,6 +6,8 @@
   "authentication.allow_sp_requested_fed_claims_only": true,
   "authentication.endpoint.enable_custom_claim_mappings": true,
   "authentication.endpoint.enable_merging_custom_claim_mappings_with_default": true,
+  "authentication.include_auth_failure_reason_in_api_based_response": false,
+  "authentication.include_multi_options_in_api_based_auth_response": false,
 
   "identity.data_source": "jdbc/WSO2IdentityDB",
   "identity_data_source.skip_db_schema_creation": false,

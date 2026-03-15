@@ -1300,6 +1300,8 @@ public class DefaultStepHandler implements StepHandler {
                     } else {
                         baseURL = loginPage;
                     }
+                    // Construct retryParam with auth failure message for API based auth flows if user is locked.
+                    retryParam = updateRetryParamForAPIBasedAuthFlows(retryParam, request);
                     redirectURL = response.encodeRedirectURL(baseURL
                             + ("?" + context.getContextIdIncludedQueryParams()))
                             + String.format(
@@ -1401,6 +1403,8 @@ public class DefaultStepHandler implements StepHandler {
                                 + ("?" + context.getContextIdIncludedQueryParams()))
                                 + errorParamString;
                     }
+                    // Construct retryParam with auth failure message for API based auth flows if user is locked.
+                    retryParam = updateRetryParamForAPIBasedAuthFlows(retryParam, request);
                 }
                 return response.encodeRedirectURL(loginPage + ("?" + context.getContextIdIncludedQueryParams())) +
                         "&authenticators=" + URLEncoder.encode(authenticatorNames, "UTF-8") + retryParam +
@@ -1686,5 +1690,24 @@ public class DefaultStepHandler implements StepHandler {
                     "accountrecoveryendpoint/confirmrecovery.do", e);
         }
         return null;
+    }
+
+    private String updateRetryParamForAPIBasedAuthFlows(String retryParam, HttpServletRequest request) {
+
+        if (FrameworkUtils.isAPIBasedAuthenticationFlow(request) && Boolean.parseBoolean(IdentityUtil.getProperty(
+                FrameworkConstants.INCLUDE_AUTH_FAILURE_REASON_IN_API_BASED_AUTH_RESPONSE))) {
+            // Set user account lock message for authFailureMsg if authFailure is true.
+            if (!StringUtils.contains(retryParam, "authFailureMsg")) {
+                if (StringUtils.contains(retryParam, "authFailure=true")) {
+                    return retryParam + "&authFailureMsg=user.account.locked";
+                } else {
+                    return retryParam + "&authFailure=true&authFailureMsg=user.account.locked";
+                }
+            } else {
+                return retryParam.replaceFirst("authFailureMsg=[^&]*",
+                        "authFailureMsg=user.account.locked");
+            }
+        }
+        return retryParam;
     }
 }
