@@ -796,7 +796,7 @@
   "cache.push_device_registration_request_cache.enable": true,
   "cache.push_device_registration_request_cache.timeout": "300",
   "cache.push_device_registration_request_cache.capacity": "$ref{cache.default_capacity}",
-
+  "push_authenticator.device_registration_context.validity_period": "180",
   "resource_access_control.default_access_allow": false,
   "resource_access_control.introspect.secured": true,
   "resource_access_control.introspect.permissions": ["/permission/admin/manage/identity/applicationmgt/view"],
