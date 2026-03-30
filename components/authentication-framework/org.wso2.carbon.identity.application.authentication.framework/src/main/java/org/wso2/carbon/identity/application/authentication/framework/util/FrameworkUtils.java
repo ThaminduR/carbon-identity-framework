@@ -2732,6 +2732,29 @@ public class FrameworkUtils {
     }
 
     /**
+     * Get all IDP groups from the remote claims without filtering against configured IDP groups.
+     * This is used when no IDP group mappings are configured but groups should still be returned
+     * when return_only_mapped_local_roles is false.
+     *
+     * @param remoteClaims     Remote claims.
+     * @param idpGroupClaimUri IDP group claim URI.
+     * @return List of IDP groups from remote claims.
+     */
+    public static List<String> getIdpGroupsFromRemoteClaims(Map<String, String> remoteClaims,
+                                                            String idpGroupClaimUri) {
+
+        if (StringUtils.isBlank(idpGroupClaimUri) || MapUtils.isEmpty(remoteClaims)) {
+            return Collections.emptyList();
+        }
+        String idpGroupValueAttr = remoteClaims.get(idpGroupClaimUri);
+        if (StringUtils.isBlank(idpGroupValueAttr)) {
+            return Collections.emptyList();
+        }
+        String idpGroupValueSeparator = getIdpGroupClaimValueSeparator();
+        return Arrays.asList(idpGroupValueAttr.split(Pattern.quote(idpGroupValueSeparator)));
+    }
+
+    /**
      * Get app associated roles of local user.
      *
      * @param authenticatedUser Authenticated user.

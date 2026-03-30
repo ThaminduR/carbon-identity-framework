@@ -56,6 +56,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.AccountLookupAttributeMappingConfig;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.application.common.model.IdPGroup;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.RoleV2;
 import org.wso2.carbon.identity.application.common.model.User;
@@ -1100,8 +1101,17 @@ public class JITProvisioningPostAuthenticationHandler extends AbstractPostAuthnH
                  mapping implementation.
                  */
                 if (!excludeUnmappedRoles) {
-                    List<String> unmappedIDPGroups = FrameworkUtils.getUnmappedIDPGroups(externalIdPConfig,
-                            originalExternalAttributeValueMap, idpGroupsClaimUri);
+                    IdPGroup[] idpGroupConfig = externalIdPConfig.getIdentityProvider().getIdPGroupConfig();
+                    List<String> unmappedIDPGroups;
+                    if (idpGroupConfig != null && idpGroupConfig.length > 0) {
+                        unmappedIDPGroups = FrameworkUtils.getUnmappedIDPGroups(externalIdPConfig,
+                                originalExternalAttributeValueMap, idpGroupsClaimUri);
+                    } else {
+                        // No IDP group mappings configured. With returnOnlyMappedLocalRoles=false,
+                        // return all groups directly from IDP claims.
+                        unmappedIDPGroups = FrameworkUtils.getIdpGroupsFromRemoteClaims(
+                                originalExternalAttributeValueMap, idpGroupsClaimUri);
+                    }
                     if (CollectionUtils.isNotEmpty(unmappedIDPGroups)) {
                         String applicationId = context.getSequenceConfig().getApplicationConfig().getServiceProvider()
                                 .getApplicationResourceId();
