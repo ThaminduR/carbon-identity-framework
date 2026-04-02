@@ -228,9 +228,7 @@ public class DefaultClaimHandler implements ClaimHandler {
                 if (returnOnlyMappedLocalRoles) {
                     federatedUserRolesUnmappedInclusive = new ArrayList<>();
                 } else {
-                    // No IDP group mappings configured. With returnOnlyMappedLocalRoles=false,
-                    // return all groups directly from IDP claims.
-                    federatedUserRolesUnmappedInclusive = FrameworkUtils.getIdpGroupsFromRemoteClaims(
+                    federatedUserRolesUnmappedInclusive = FrameworkUtils.getUnmappedIDPGroups(externalIdPConfig,
                             remoteClaims, idpGroupClaimUri);
                 }
             }
