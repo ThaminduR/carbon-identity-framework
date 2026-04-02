@@ -2713,9 +2713,6 @@ public class FrameworkUtils {
             return Collections.emptyList();
         }
         IdPGroup[] possibleIdPGroups = identityProvider.getIdPGroupConfig();
-        if (ArrayUtils.isEmpty(possibleIdPGroups)) {
-            return Collections.emptyList();
-        }
         String idpGroupValueAttr = remoteClaims.get(idpGroupClaimUri);
         if (StringUtils.isBlank(idpGroupValueAttr)) {
             return Collections.emptyList();
