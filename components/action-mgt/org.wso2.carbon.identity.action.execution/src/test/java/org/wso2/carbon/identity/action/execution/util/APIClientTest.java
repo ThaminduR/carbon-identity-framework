@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2024-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -56,7 +56,6 @@ import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.SocketTimeoutException;
@@ -535,14 +534,6 @@ public class APIClientTest {
     @Test
     public void testGetConnectionManagerWithCarbonTruststore() throws Exception {
 
-        KeyStore emptyKeyStore = KeyStore.getInstance("JKS");
-        emptyKeyStore.load(null, "password".toCharArray());
-        File tempTruststore = File.createTempFile("test-truststore", ".jks");
-        tempTruststore.deleteOnExit();
-        try (FileOutputStream fos = new FileOutputStream(tempTruststore)) {
-            emptyKeyStore.store(fos, "password".toCharArray());
-        }
-
         ActionExecutorConfig config = mock(ActionExecutorConfig.class);
         actionExecutorConfigStatic.when(ActionExecutorConfig::getInstance).thenReturn(config);
         when(config.getHttpConnectionPoolSize()).thenReturn(20);
@@ -552,7 +543,7 @@ public class APIClientTest {
             ServerConfiguration serverConfig = mock(ServerConfiguration.class);
             serverConfigStatic.when(ServerConfiguration::getInstance).thenReturn(serverConfig);
             when(serverConfig.getFirstProperty("Security.TrustStore.Location"))
-                    .thenReturn(tempTruststore.getAbsolutePath());
+                    .thenReturn(File.createTempFile("test-truststore", ".jks").getAbsolutePath());
             when(serverConfig.getFirstProperty("Security.TrustStore.Password")).thenReturn("password");
             when(serverConfig.getFirstProperty("Security.TrustStore.Type")).thenReturn("JKS");
 
@@ -560,6 +551,7 @@ public class APIClientTest {
                 keystoreUtilsStatic.when(() -> KeystoreUtils.getKeystoreInstance("JKS"))
                         .thenReturn(KeyStore.getInstance("JKS"));
                 new APIClient();
+                keystoreUtilsStatic.verify(() -> KeystoreUtils.getKeystoreInstance("JKS"), times(1));
             }
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2024-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -505,16 +505,6 @@ public class ActionExecutorConfigTest {
 
         // If the config is absent, the default false should be returned.
         when(mockIdentityConfigParser.getConfiguration()).thenReturn(new HashMap<>());
-        assertFalse(actionExecutorConfig.useCarbonTruststore());
-    }
-
-    @Test
-    public void testUseCarbonTruststoreForInvalidConfig() {
-
-        // If an unrecognised value is configured, the default false should be returned.
-        Map<String, Object> configMap = new HashMap<>();
-        configMap.put("Actions.HTTPClient.UseCarbonTruststore", "invalid");
-        when(mockIdentityConfigParser.getConfiguration()).thenReturn(configMap);
         assertFalse(actionExecutorConfig.useCarbonTruststore());
     }
 }

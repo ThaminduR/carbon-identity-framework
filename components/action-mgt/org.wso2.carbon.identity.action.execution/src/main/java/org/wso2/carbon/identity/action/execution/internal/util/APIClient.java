@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2024-2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -55,6 +55,7 @@ import org.wso2.carbon.identity.action.execution.api.model.ResponseData;
 import org.wso2.carbon.identity.action.execution.internal.service.impl.ResponseDataDeserializer;
 import org.wso2.carbon.utils.security.KeystoreUtils;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
@@ -120,7 +121,7 @@ public final class APIClient {
             }
 
             KeyStore trustStore = KeystoreUtils.getKeystoreInstance(trustStoreType);
-            try (FileInputStream trustStoreStream = new FileInputStream(trustStorePath)) {
+            try (FileInputStream trustStoreStream = new FileInputStream((new File(trustStorePath)).getAbsolutePath())) {
                 trustStore.load(trustStoreStream, trustStorePassword.toCharArray());
             }
 
@@ -137,8 +138,8 @@ public final class APIClient {
                     .build();
 
             return new PoolingHttpClientConnectionManager(socketFactoryRegistry);
-        } catch (CertificateException | IOException | KeyManagementException |
-                 KeyStoreException | NoSuchAlgorithmException | NoSuchProviderException e) {
+        } catch (CertificateException | IOException | KeyManagementException | KeyStoreException |
+                 NoSuchAlgorithmException | NoSuchProviderException e) {
             LOG.warn("Failed to load Carbon truststore. Falling back to JVM default truststore.", e);
             return new PoolingHttpClientConnectionManager();
         }
