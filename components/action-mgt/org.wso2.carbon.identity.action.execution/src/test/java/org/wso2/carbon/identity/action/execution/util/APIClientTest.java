@@ -56,6 +56,7 @@ import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.SocketTimeoutException;
@@ -534,6 +535,14 @@ public class APIClientTest {
     @Test
     public void testGetConnectionManagerWithCarbonTruststore() throws Exception {
 
+        KeyStore emptyKeyStore = KeyStore.getInstance("JKS");
+        emptyKeyStore.load(null, "password".toCharArray());
+        File tempTruststore = File.createTempFile("test-truststore", ".jks");
+        tempTruststore.deleteOnExit();
+        try (FileOutputStream fos = new FileOutputStream(tempTruststore)) {
+            emptyKeyStore.store(fos, "password".toCharArray());
+        }
+
         ActionExecutorConfig config = mock(ActionExecutorConfig.class);
         actionExecutorConfigStatic.when(ActionExecutorConfig::getInstance).thenReturn(config);
         when(config.getHttpConnectionPoolSize()).thenReturn(20);
@@ -543,7 +552,7 @@ public class APIClientTest {
             ServerConfiguration serverConfig = mock(ServerConfiguration.class);
             serverConfigStatic.when(ServerConfiguration::getInstance).thenReturn(serverConfig);
             when(serverConfig.getFirstProperty("Security.TrustStore.Location"))
-                    .thenReturn(File.createTempFile("test-truststore", ".jks").getAbsolutePath());
+                    .thenReturn(tempTruststore.getAbsolutePath());
             when(serverConfig.getFirstProperty("Security.TrustStore.Password")).thenReturn("password");
             when(serverConfig.getFirstProperty("Security.TrustStore.Type")).thenReturn("JKS");
 
