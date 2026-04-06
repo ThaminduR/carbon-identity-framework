@@ -219,6 +219,7 @@ public class DefaultProvisioningHandler implements ProvisioningHandler {
     public void handleWithV2Roles(List<String> roleIdList, String subject, Map<String, String> attributes,
                        String provisioningUserStoreId, String tenantDomain,
                        AuthenticationContext context) throws FrameworkException {
+                        
         handleWithV2Roles(roleIdList, subject, attributes, provisioningUserStoreId, tenantDomain);
     }
 
