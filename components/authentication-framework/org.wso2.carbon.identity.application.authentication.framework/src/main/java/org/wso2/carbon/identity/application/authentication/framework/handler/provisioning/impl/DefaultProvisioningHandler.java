@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.util.PermissionUpdateUtil;
+import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.provisioning.ProvisioningHandler;
@@ -171,7 +172,7 @@ public class DefaultProvisioningHandler implements ProvisioningHandler {
 
     @Override
     public void handleWithV2Roles(List<String> roleIdList, String subject, Map<String, String> attributes,
-                       String provisioningUserStoreId, String tenantDomain) throws FrameworkException {
+                  String provisioningUserStoreId, String tenantDomain) throws FrameworkException {
 
         RealmService realmService = FrameworkServiceDataHolder.getInstance().getRealmService();
 
@@ -215,6 +216,14 @@ public class DefaultProvisioningHandler implements ProvisioningHandler {
             IdentityUtil.threadLocalProperties.get().remove(FrameworkConstants.JIT_PROVISIONING_FLOW);
             IdentityUtil.threadLocalProperties.get().remove(FrameworkConstants.ATTRIBUTE_SYNC_METHOD);
         }
+    }
+
+    @Override
+    public void handleWithV2Roles(List<String> roleIdList, String subject, Map<String, String> attributes,
+                       String provisioningUserStoreId, String tenantDomain,
+                       AuthenticationContext context) throws FrameworkException {
+                        
+        handleWithV2Roles(roleIdList, subject, attributes, provisioningUserStoreId, tenantDomain);
     }
 
     private void handleUserProvisioning(String username, UserStoreManager userStoreManager, String userStoreDomain,
