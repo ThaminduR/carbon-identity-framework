@@ -1511,6 +1511,14 @@
         {% endif %}
         <ReturnValidNameIDFormat>{{saml.return_valid_name_id_format}}</ReturnValidNameIDFormat>
         <SAMLSLOFrontChannelPostBindingLogoutRequestSignatureWithTenantCert>{{saml.slo.front_channel.post_binding.logout_request_signature_with_tenant_cert}}</SAMLSLOFrontChannelPostBindingLogoutRequestSignatureWithTenantCert>
+        {% if saml.endpoints.v2 is defined %}
+        <!-- V2 configs for saml endpoints -->
+        <V2>
+            {% if saml.endpoints.v2.logout is defined %}
+            <DefaultLogoutEndpoint>{{saml.endpoints.v2.logout}}</DefaultLogoutEndpoint>
+            {% endif %}
+        </V2>
+        {% endif %}
     </SSOService>
 
     <Consent>
