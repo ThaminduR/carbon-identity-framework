@@ -93,6 +93,8 @@ public class IdentityTenantUtilTest {
 
         identityTenantUtil.when(() -> IdentityTenantUtil.isSystemApplication(tenantDomain, clientID)).
                 thenCallRealMethod();
+        identityTenantUtil.when(() -> IdentityTenantUtil.isConsoleApplication(tenantDomain, clientID))
+                .thenCallRealMethod();
 
         assertEquals(IdentityTenantUtil.isSystemApplication(tenantDomain, clientID), expectedResult);
     }
