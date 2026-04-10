@@ -975,6 +975,7 @@
                 If that doesn't satisfy uncomment the following config and explicitly configure the value
             -->
             <IDTokenIssuerID>{{oauth.oidc.id_token.issuer}}</IDTokenIssuerID>
+            <UseEntityIdAsIssuer>{{ oauth.oidc.id_token.use_entityid_as_issuer }}</UseEntityIdAsIssuer>
             <IDTokenCustomClaimsCallBackHandler>{{oauth.oidc.extensions.claim_callback_handler}}</IDTokenCustomClaimsCallBackHandler>
             <IDTokenExpiration>{{oauth.oidc.token_validation.id_token_validity}}</IDTokenExpiration>
             <UserInfoJWTSignatureAlgorithm>{{oauth.oidc.user_info.jwt_signature_algorithm}}</UserInfoJWTSignatureAlgorithm>
