@@ -2167,5 +2167,7 @@
 
   "configs.endpoint.elevate_permission": true,
 
-  "authentication.mark_step_completed_on_interrupt": true
+  "authentication.mark_step_completed_on_interrupt": true,
+
+  "saas_apps.return_roles_in_id_token": false
 }
