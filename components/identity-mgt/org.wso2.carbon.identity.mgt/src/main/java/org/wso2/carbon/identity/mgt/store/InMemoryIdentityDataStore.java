@@ -55,6 +55,23 @@ public class InMemoryIdentityDataStore extends UserIdentityDataStore {
     public void store(UserIdentityClaimsDO userIdentityDTO, UserStoreManager userStoreManager)
             throws IdentityException {
 
+        storeToCache(userIdentityDTO, userStoreManager, false);
+    }
+
+    @Override
+    public void storeOnRead(UserIdentityClaimsDO userIdentityDTO, UserStoreManager userStoreManager)
+            throws IdentityException {
+        storeToCache(userIdentityDTO, userStoreManager, true);
+    }
+
+    /**
+     * Stores the given {@link UserIdentityClaimsDO} to the cache.
+     *
+     * @param userIdentityDTO    the identity claims to store
+     * @param userStoreManager   the user store manager
+     * @param onRead             if {@code true}, uses {@code cache.putOnRead()}; otherwise uses {@code cache.put()}
+     */
+    private void storeToCache(UserIdentityClaimsDO userIdentityDTO, UserStoreManager userStoreManager, boolean onRead) {
         try {
             PrivilegedCarbonContext.startTenantFlow();
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
@@ -93,7 +110,11 @@ public class InMemoryIdentityDataStore extends UserIdentityDataStore {
 
                 Cache<String, UserIdentityClaimsDO> cache = getCache();
                 if (cache != null) {
-                    cache.put(key, userIdentityDTO);
+                    if (onRead) {
+                        cache.putOnRead(key, userIdentityDTO);
+                    } else {
+                        cache.put(key, userIdentityDTO);
+                    }
                 }
             }
         } catch (UserStoreException e) {
