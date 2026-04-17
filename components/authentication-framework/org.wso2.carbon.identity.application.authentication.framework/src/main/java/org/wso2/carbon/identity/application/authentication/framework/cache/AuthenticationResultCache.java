@@ -111,55 +111,57 @@ public class AuthenticationResultCache extends
             }
             SessionDataStore.getInstance().storeSessionData(key.getResultId(), CACHE_NAME, entry, tenantId);
         }
-
-    /**
-     * Retrieves a cache entry.
-     *
-     * @param key CacheKey
-     * @return Cached entry.
-     */
-    public AuthenticationResultCacheEntry getValueFromCache(AuthenticationResultCacheKey key) {
-
-        AuthenticationResultCacheEntry entry = super.getValueFromCache(key);
-        if (entry == null && isTemporarySessionDataPersistEnabled) {
-            entry = (AuthenticationResultCacheEntry) SessionDataStore.getInstance().
-                    getSessionData(key.getResultId(), CACHE_NAME);
-            if (entry != null && isCacheEntryExpired(entry)) {
-                return null;
-            }
-        }
-        return entry;
     }
 
-    private boolean isCacheEntryExpired(AuthenticationResultCacheEntry entry) {
+        /**
+         * Retrieves a cache entry.
+         *
+         * @param key CacheKey
+         * @return Cached entry.
+         */
+        public AuthenticationResultCacheEntry getValueFromCache (AuthenticationResultCacheKey key){
 
-        String cacheCreatedTimestamp;
-        if (entry.getResult().getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
-            cacheCreatedTimestamp = entry.getResult().getProperty(FrameworkConstants.UPDATED_TIMESTAMP).toString();
-        } else if (entry.getResult().getProperty(FrameworkConstants.CREATED_TIMESTAMP) != null) {
-            cacheCreatedTimestamp = entry.getResult().getProperty(FrameworkConstants.CREATED_TIMESTAMP).toString();
-        } else {
-            log.warn("Cache entry does not have a created or updated timestamp.");
+            AuthenticationResultCacheEntry entry = super.getValueFromCache(key);
+            if (entry == null && isTemporarySessionDataPersistEnabled) {
+                entry = (AuthenticationResultCacheEntry) SessionDataStore.getInstance().
+                        getSessionData(key.getResultId(), CACHE_NAME);
+                if (entry != null && isCacheEntryExpired(entry)) {
+                    return null;
+                }
+            }
+            return entry;
+        }
+
+        private boolean isCacheEntryExpired (AuthenticationResultCacheEntry entry){
+
+            String cacheCreatedTimestamp;
+            if (entry.getResult().getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
+                cacheCreatedTimestamp = entry.getResult().getProperty(FrameworkConstants.UPDATED_TIMESTAMP).toString();
+            } else if (entry.getResult().getProperty(FrameworkConstants.CREATED_TIMESTAMP) != null) {
+                cacheCreatedTimestamp = entry.getResult().getProperty(FrameworkConstants.CREATED_TIMESTAMP).toString();
+            } else {
+                log.warn("Cache entry does not have a created or updated timestamp.");
+                return false;
+            }
+            if (StringUtils.isNotBlank(cacheCreatedTimestamp) &&
+                    (FrameworkUtils.getCurrentStandardNano() >
+                            entry.getValidityPeriod() + Long.parseLong(cacheCreatedTimestamp) * 1000000)) {
+                log.warn("Authentication result cache is expired");
+                return true;
+            }
             return false;
         }
-        if (StringUtils.isNotBlank(cacheCreatedTimestamp) &&
-                (FrameworkUtils.getCurrentStandardNano() >
-                    entry.getValidityPeriod() + Long.parseLong(cacheCreatedTimestamp) * 1000000)) {
-            log.warn("Authentication result cache is expired");
-            return true;
-        }
-        return false;
-    }
 
-    /**
-     * Clears a cache entry.
-     *
-     * @param key Key to clear cache.
-     */
-    public void clearCacheEntry(AuthenticationResultCacheKey key) {
-        super.clearCacheEntry(key);
-        if (isTemporarySessionDataPersistEnabled) {
-            SessionDataStore.getInstance().clearSessionData(key.getResultId(), CACHE_NAME);
+        /**
+         * Clears a cache entry.
+         *
+         * @param key Key to clear cache.
+         */
+        public void clearCacheEntry (AuthenticationResultCacheKey key){
+            super.clearCacheEntry(key);
+            if (isTemporarySessionDataPersistEnabled) {
+                SessionDataStore.getInstance().clearSessionData(key.getResultId(), CACHE_NAME);
+            }
         }
-    }
 }
+

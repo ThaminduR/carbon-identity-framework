@@ -87,7 +87,7 @@ public class AuthenticationContextCache extends
         }
     }
 
-    public void addToCacheOnRead(AuthenticationContextCacheKey key, AuthenticationContextCacheEntry entry) {Expand annotationCheck warning on line R90
+    public void addToCacheOnRead(AuthenticationContextCacheKey key, AuthenticationContextCacheEntry entry) {
 
         super.addToCacheOnRead(key, entry);
         if (isTemporarySessionDataPersistEnabled) {
