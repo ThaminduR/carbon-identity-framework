@@ -119,7 +119,7 @@ public class AuthenticationResultCache extends
          * @param key CacheKey
          * @return Cached entry.
          */
-        public AuthenticationResultCacheEntry getValueFromCache (AuthenticationResultCacheKey key){
+        public AuthenticationResultCacheEntry getValueFromCache (AuthenticationResultCacheKey key) {
 
             AuthenticationResultCacheEntry entry = super.getValueFromCache(key);
             if (entry == null && isTemporarySessionDataPersistEnabled) {
@@ -132,7 +132,7 @@ public class AuthenticationResultCache extends
             return entry;
         }
 
-        private boolean isCacheEntryExpired (AuthenticationResultCacheEntry entry){
+        private boolean isCacheEntryExpired (AuthenticationResultCacheEntry entry) {
 
             String cacheCreatedTimestamp;
             if (entry.getResult().getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
@@ -157,7 +157,7 @@ public class AuthenticationResultCache extends
          *
          * @param key Key to clear cache.
          */
-        public void clearCacheEntry (AuthenticationResultCacheKey key){
+        public void clearCacheEntry (AuthenticationResultCacheKey key) {
             super.clearCacheEntry(key);
             if (isTemporarySessionDataPersistEnabled) {
                 SessionDataStore.getInstance().clearSessionData(key.getResultId(), CACHE_NAME);
