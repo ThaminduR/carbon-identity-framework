@@ -191,6 +191,7 @@ public abstract class BaseCache<K extends Serializable, V extends Serializable> 
      *
      * @param key   Key which the cache entry is indexed by.
      * @param entry Value to be stored in the cache.
+     * @param tenantDomain The tenant domain where the cache is maintained.
      */
     public void addToCacheOnRead(K key, V entry, String tenantDomain) {
 
@@ -218,7 +219,7 @@ public abstract class BaseCache<K extends Serializable, V extends Serializable> 
      *
      * @param key   Key which cache entry is indexed.
      * @param entry Actual object where cache entry is placed.
-     * @param tenantDomain The tenant domain where the cache is maintained.
+     * @param tenantId The tenant id where the cache is maintained.
      */
     public void addToCacheOnRead(K key, V entry, int tenantId) {
 
