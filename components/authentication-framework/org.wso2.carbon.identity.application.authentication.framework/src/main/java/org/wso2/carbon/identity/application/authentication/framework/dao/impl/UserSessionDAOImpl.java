@@ -392,16 +392,16 @@ public class UserSessionDAOImpl implements UserSessionDAO {
         }
 
         Map<String, Application> applications = new HashMap<>();
-        List<String> appIds = new ArrayList<>(applicationIds);
-        int[] parsedAppIds = new int[appIds.size()];
+        int[] parsedAppIds = new int[applicationIds.size()];
+        int idx = 0;
         try {
-            for (int i = 0; i < appIds.size(); i++) {
-                parsedAppIds[i] = Integer.parseInt(appIds.get(i));
+            for (String appId : applicationIds) {
+                parsedAppIds[idx++] = Integer.parseInt(appId);
             }
         } catch (NumberFormatException e) {
             throw new SessionManagementServerException(
                     SessionMgtConstants.ErrorMessages.ERROR_CODE_UNABLE_TO_GET_SESSION,
-                    "Invalid application ID found in session data: " + appIds, e);
+                    "Invalid application ID found in session data: " + applicationIds, e);
         }
         String placeholder = String.join(", ", Collections.nCopies(parsedAppIds.length, "?"));
         // TODO:: Get applications using application-mgt services and remove component unrelated queries.
