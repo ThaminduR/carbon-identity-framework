@@ -216,6 +216,12 @@ public class SessionMgtUtils {
                 String operation = expressionNode.getOperation();
                 String value = expressionNode.getValue();
                 String attribute = expressionNode.getAttributeValue();
+
+                if (StringUtils.isBlank(attribute) || StringUtils.isBlank(operation) || value == null) {
+                    throw new UserSessionException(
+                            "Invalid filter node: attribute, operation, and value must not be null or blank.");
+                }
+
                 SessionMgtConstants.FilterType filterType = SessionMgtConstants.FilterType.DEFAULT;
 
                 StringBuilder filterSQL = new StringBuilder();
