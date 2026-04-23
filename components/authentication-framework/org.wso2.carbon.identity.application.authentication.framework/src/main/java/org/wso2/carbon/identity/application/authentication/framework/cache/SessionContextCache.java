@@ -74,10 +74,34 @@ public class SessionContextCache extends BaseCache<SessionContextCacheKey, Sessi
 
         if (log.isDebugEnabled()) {
             log.debug("Adding session context corresponding to the key : " + key.getContextId() +
-                " with accessed time " + entry.getAccessedTime() + " and validity time " + entry.getValidityPeriod());
+                    " with accessed time " + entry.getAccessedTime() +
+                    " and validity time " + entry.getValidityPeriod());
         }
         entry.setAccessedTime();
         super.addToCache(key, entry, resolveLoginTenantDomain(loginTenantDomain));
+        optimizeAndStoreSessionData(key, entry);
+    }
+
+    public void addToCacheOnRead(SessionContextCacheKey key, SessionContextCacheEntry entry, String loginTenantDomain) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Adding session context corresponding to the key : " + key.getContextId() +
+                    " with accessed time " + entry.getAccessedTime() +
+                    " and validity time " + entry.getValidityPeriod());
+        }
+        entry.setAccessedTime();
+        super.addToCacheOnRead(key, entry, resolveLoginTenantDomain(loginTenantDomain));
+        optimizeAndStoreSessionData(key, entry);
+    }
+
+    /**
+     * Optimizes the session context cache entry and persists it to the session data store.
+     *
+     * @param key   Cache key for the session context.
+     * @param entry Cache entry to be optimized and stored.
+     */
+    private void optimizeAndStoreSessionData(SessionContextCacheKey key, SessionContextCacheEntry entry) {
+
         Object authUser = entry.getContext().getProperty(FrameworkConstants.AUTHENTICATED_USER);
         try {
             entry = SessionContextLoader.getInstance().optimizeSessionContextCacheEntry(entry);
