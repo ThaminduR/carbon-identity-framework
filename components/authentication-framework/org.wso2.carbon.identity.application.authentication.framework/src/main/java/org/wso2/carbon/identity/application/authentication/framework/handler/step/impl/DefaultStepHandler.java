@@ -1741,11 +1741,9 @@ public class DefaultStepHandler implements StepHandler {
         }
         List<AuthenticatorConfig> filteredAuthConfigList = (List<AuthenticatorConfig>) filteredAuthConfigListObject;
         for (AuthenticatorConfig config : filteredAuthConfigList) {
-            if ((config.getApplicationAuthenticator() instanceof AuthenticationFlowHandler) ||
-                    (config.getApplicationAuthenticator() instanceof LocalApplicationAuthenticator &&
+            if ((config.getApplicationAuthenticator() instanceof LocalApplicationAuthenticator &&
                             (BASIC_AUTH_MECHANISM).equalsIgnoreCase(config.getApplicationAuthenticator()
                                     .getAuthMechanism()) && IdentityUtil.getIdentityErrorMsg() != null)) {
-                IdentityUtil.clearIdentityErrorMsg();
                 ApplicationAuthenticator authenticator = config.getApplicationAuthenticator();
                 IdentityErrorMsgContext errorMsgContext = IdentityUtil.getIdentityErrorMsg();
                 try {
