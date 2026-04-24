@@ -421,6 +421,7 @@ public class DefaultStepHandler implements StepHandler {
                             authenticatorConfig = config;
                             isAuthFlowHandlerOrBasicAuthInMultiOptionStep = true;
                             sendToPage = false;
+                            context.setProperty("filteredAuthenticatorConfigs", filteredAuthConfigList);
                             break;
                         }
                     }
@@ -973,6 +974,13 @@ public class DefaultStepHandler implements StepHandler {
                 LoggerUtils.triggerDiagnosticLogEvent(diagLogBuilder);
             }
         } catch (InvalidCredentialsException e) {
+
+            try {
+                populateAuthInitDataForAPIBasedFlow(request, response, context);
+            } catch (Exception ex) {
+                LOG.error("Error while handling invalid credentials exception", ex);
+            }
+
             if (LOG.isDebugEnabled()) {
                 LOG.debug("A login attempt was failed due to invalid credentials", e);
             }
@@ -1014,6 +1022,13 @@ public class DefaultStepHandler implements StepHandler {
             handleFailedAuthentication(request, response, context, authenticatorConfig, e.getUser());
         } catch (AuthenticationFailedException e) {
             IdentityErrorMsgContext errorContext = IdentityUtil.getIdentityErrorMsg();
+
+            try {
+                populateAuthInitDataForAPIBasedFlow(request, response, context);
+            } catch (Exception ex) {
+                LOG.error("Error while handling invalid credentials exception", ex);
+            }
+
             if (errorContext != null) {
                 Throwable rootCause = ExceptionUtils.getRootCause(e);
                 if (!IdentityCoreConstants.ADMIN_FORCED_USER_PASSWORD_RESET_VIA_OTP_ERROR_CODE
@@ -1690,6 +1705,66 @@ public class DefaultStepHandler implements StepHandler {
                     "accountrecoveryendpoint/confirmrecovery.do", e);
         }
         return null;
+    }
+
+    /**
+     * Populates the API-based authentication initiation data for the basic authenticator when there is an
+     * identity error message present (e.g., auth failure/retry scenario). In the normal multi-option flow,
+     * basic auth is only auto-selected when there is NO error ({@code IdentityUtil.getIdentityErrorMsg() == null}).
+     * This method handles the complementary case — when an error IS present — by finding the basic auth config,
+     * initiating the auth request, and populating the API-based auth initiation data.
+     *
+     * @param request               HTTP servlet request.
+     * @param response              HTTP servlet response.
+     * @param context               Authentication context.
+     * @throws AuthenticationFailedException if an error occurs during authenticator processing.
+     */
+    private void populateAuthInitDataForAPIBasedFlow(HttpServletRequest request, HttpServletResponse response,
+                                                     AuthenticationContext context)
+            throws AuthenticationFailedException, LogoutFailedException {
+
+        if (!Boolean.parseBoolean(IdentityUtil.getProperty(
+                FrameworkConstants.INCLUDE_AUTH_INIT_DATA_ON_RETRY_IN_API_BASED_AUTH_RESPONSE))) {
+            return;
+        }
+
+        if (!FrameworkUtils.isAPIBasedAuthenticationFlow(request)) {
+            return;
+        }
+
+        Object filteredAuthConfigListObject = context.getParameter("filteredAuthenticatorConfigs");
+        if (filteredAuthConfigListObject == null || !(filteredAuthConfigListObject instanceof List)) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("No filtered authenticator configs found in the context parameters for API-based flow.");
+            }
+            return;
+        }
+        List<AuthenticatorConfig> filteredAuthConfigList = (List<AuthenticatorConfig>) filteredAuthConfigListObject;
+        for (AuthenticatorConfig config : filteredAuthConfigList) {
+            if ((config.getApplicationAuthenticator() instanceof AuthenticationFlowHandler) ||
+                    (config.getApplicationAuthenticator() instanceof LocalApplicationAuthenticator &&
+                            (BASIC_AUTH_MECHANISM).equalsIgnoreCase(config.getApplicationAuthenticator()
+                                    .getAuthMechanism()) && IdentityUtil.getIdentityErrorMsg() != null)) {
+                IdentityUtil.clearIdentityErrorMsg();
+                ApplicationAuthenticator authenticator = config.getApplicationAuthenticator();
+                IdentityErrorMsgContext errorMsgContext = IdentityUtil.getIdentityErrorMsg();
+                try {
+                    authenticator.process(request, response, context);
+                } catch (AuthenticationFailedException | LogoutFailedException e) {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Error while invoking process in " + authenticator.getName() +
+                                " in multi-option page.");
+                    }
+                    return;
+                } finally {
+                    if (IdentityUtil.getIdentityErrorMsg() == null) {
+                        IdentityUtil.setIdentityErrorMsg(errorMsgContext);
+                    }
+                }
+                handleAPIBasedAuthenticationData(request, authenticator, context);
+                break;
+            }
+        }
     }
 
     private String updateRetryParamForAPIBasedAuthFlows(String retryParam, HttpServletRequest request) {
