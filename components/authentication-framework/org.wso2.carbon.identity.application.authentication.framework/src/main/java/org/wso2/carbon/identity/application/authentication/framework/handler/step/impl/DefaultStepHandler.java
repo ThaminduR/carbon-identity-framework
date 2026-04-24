@@ -115,6 +115,7 @@ public class DefaultStepHandler implements StepHandler {
     private static final String FAILURE = "Failure";
 
     private static final String USERNAME = "username";
+    private static final String FILTERED_AUTHENTICATOR_CONFIGS = "filteredAuthenticatorConfigs";
 
     public static DefaultStepHandler getInstance() {
 
@@ -421,7 +422,7 @@ public class DefaultStepHandler implements StepHandler {
                             authenticatorConfig = config;
                             isAuthFlowHandlerOrBasicAuthInMultiOptionStep = true;
                             sendToPage = false;
-                            context.setProperty("filteredAuthenticatorConfigs", filteredAuthConfigList);
+                            context.setProperty(FILTERED_AUTHENTICATOR_CONFIGS, filteredAuthConfigList);
                             break;
                         }
                     }
@@ -1732,7 +1733,7 @@ public class DefaultStepHandler implements StepHandler {
             return;
         }
 
-        Object filteredAuthConfigListObject = context.getParameter("filteredAuthenticatorConfigs");
+        Object filteredAuthConfigListObject = context.getParameter(FILTERED_AUTHENTICATOR_CONFIGS);
         if (filteredAuthConfigListObject == null || !(filteredAuthConfigListObject instanceof List)) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("No filtered authenticator configs found in the context parameters for API-based flow.");
