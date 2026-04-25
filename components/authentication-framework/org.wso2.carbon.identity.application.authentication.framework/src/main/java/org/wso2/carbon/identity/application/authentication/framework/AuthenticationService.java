@@ -245,7 +245,8 @@ public class AuthenticationService {
         AuthServiceResponseData responseData = new AuthServiceResponseData();
         List<AuthenticatorData> authenticatorDataList;
         boolean isMultiOptionsResponse = request.isMultiOptionsResponse();
-        if (includeMultiOptionsInResponse() && isMultiOptionsResponse) {
+        if ((includeMultiOptionsInResponse() || includeAuthInitDataOnRetryInApiBasedAuthResponse())
+                && isMultiOptionsResponse) {
             responseData.setAuthenticatorSelectionRequired(true);
             authenticatorDataList = getAuthenticatorBasicData(response.getAuthenticators(),
                     request.getAuthInitiationData(), getTenantDomain((HttpServletRequest) request.getRequest()));
@@ -576,5 +577,11 @@ public class AuthenticationService {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(
                 FrameworkConstants.INCLUDE_MULTI_OPTIONS_IN_API_BASED_RESPONSE));
+    }
+
+    private boolean includeAuthInitDataOnRetryInApiBasedAuthResponse() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(
+                FrameworkConstants.INCLUDE_AUTH_INIT_DATA_ON_RETRY_IN_API_BASED_AUTH_RESPONSE));
     }
 }
