@@ -440,7 +440,7 @@ public class DefaultStepHandler implements StepHandler {
                     }
                 }
 
-                if (!isAuthFlowHandlerOrBasicAuthInMultiOptionStep &&
+                if (!isAuthFlowHandlerOrBasicAuthInMultiOptionStep && IdentityUtil.getIdentityErrorMsg() == null &&
                         context.getProperty(MULTI_OPTION_BASIC_AUTHENTICATOR) != null) {
                     context.removeProperty(MULTI_OPTION_BASIC_AUTHENTICATOR);
                 }
