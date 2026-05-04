@@ -199,6 +199,8 @@ public class CachedBackedConfigurationDAO implements ConfigurationDAO {
             throws ConfigurationManagementException {
 
         configurationDAO.updateAttribute(attributeId, resourceId, attribute);
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        deleteCacheByResourceId(resourceId, tenantId);
     }
 
     @Override
@@ -206,6 +208,8 @@ public class CachedBackedConfigurationDAO implements ConfigurationDAO {
             throws ConfigurationManagementException {
 
         configurationDAO.addAttribute(attributeId, resourceId, attribute);
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        deleteCacheByResourceId(resourceId, tenantId);
     }
 
     @Override
@@ -213,6 +217,8 @@ public class CachedBackedConfigurationDAO implements ConfigurationDAO {
             throws ConfigurationManagementException {
 
         configurationDAO.replaceAttribute(attributeId, resourceId, attribute);
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        deleteCacheByResourceId(resourceId, tenantId);
     }
 
     @Override
@@ -220,6 +226,8 @@ public class CachedBackedConfigurationDAO implements ConfigurationDAO {
             throws ConfigurationManagementException {
 
         configurationDAO.deleteAttribute(attributeId, resourceId, attributeKey);
+        int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        deleteCacheByResourceId(resourceId, tenantId);
     }
 
     @Override
