@@ -67,8 +67,9 @@ public class Utils {
                                                      String filterResolvedForSQL, int offset, int limit)
             throws SQLException, DataAccessException {
 
+        String databaseProductName = connection.getMetaData().getDatabaseProductName();
         PreparedStatement prepStmt;
-        if (JdbcUtils.isPostgreSQLDB()) {
+        if (JdbcUtils.isPostgreSQLDB(databaseProductName)) {
             prepStmt = connection.prepareStatement(sqlQuery);
             prepStmt.setInt(1, tenantId);
             prepStmt.setString(2, filterResolvedForSQL);

@@ -124,6 +124,17 @@ public class JdbcUtils {
     }
 
     /**
+     * Check if the DB is H2 for the given database product name.
+     *
+     * @param databaseProductName database product name.
+     * @return true if H2, false otherwise.
+     */
+    public static boolean isH2DB(String databaseProductName) {
+
+        return H2.equalsIgnoreCase(databaseProductName);
+    }
+
+    /**
      * Check if the DB is DB2. Identity database is used.
      *
      * @return true if DB2, false otherwise.
@@ -144,6 +155,17 @@ public class JdbcUtils {
     public static boolean isDB2DB(Database database) throws DataAccessException {
 
         return isDBTypeOf(DB2, database);
+    }
+
+    /**
+     * Check if the DB is DB2 for the given database product name.
+     *
+     * @param databaseProductName database product name.
+     * @return true if DB2, false otherwise.
+     */
+    public static boolean isDB2DB(String databaseProductName) {
+
+        return DB2.equalsIgnoreCase(databaseProductName);
     }
 
     /**
@@ -170,6 +192,17 @@ public class JdbcUtils {
     }
 
     /**
+     * Check if the DB is MySQL for the given database product name.
+     *
+     * @param databaseProductName database product name.
+     * @return true if DB is MySQL, false otherwise.
+     */
+    public static boolean isMySQLDB(String databaseProductName) {
+
+        return MY_SQL.equalsIgnoreCase(databaseProductName);
+    }
+
+    /**
      * Check if the DB is MSSql. Identity database is used.
      *
      * @return true if DB is MSSql, false otherwise.
@@ -190,6 +223,17 @@ public class JdbcUtils {
     public static boolean isMSSqlDB(Database database) throws DataAccessException {
 
         return isDBTypeOf(MICROSOFT, database) || isDBTypeOf(S_MICROSOFT, database);
+    }
+
+    /**
+     * Check if the DB is MSSql for the given database product name.
+     *
+     * @param databaseProductName database product name.
+     * @return true if DB is MSSql, false otherwise.
+     */
+    public static boolean isMSSqlDB(String databaseProductName) {
+
+        return MICROSOFT.equalsIgnoreCase(databaseProductName) || S_MICROSOFT.equalsIgnoreCase(databaseProductName);
     }
 
     /**
@@ -216,6 +260,17 @@ public class JdbcUtils {
     }
 
     /**
+     * Check if the DB is Maria DB for the given database product name.
+     *
+     * @param databaseProductName database product name.
+     * @return true if DB is Maria DB, false otherwise.
+     */
+    public static boolean isMariaDB(String databaseProductName) {
+
+        return MARIADB.equalsIgnoreCase(databaseProductName);
+    }
+
+    /**
      * Check if the DB is PostgreSQL. Identity database is used.
      *
      * @return true if DB is PostgreSQL, false otherwise.
@@ -236,6 +291,17 @@ public class JdbcUtils {
     public static boolean isPostgreSQLDB(Database database) throws DataAccessException {
 
         return isDBTypeOf(POSTGRE_SQL, database);
+    }
+
+    /**
+     * Check if the DB is PostgreSQL for the given database product name.
+     *
+     * @param databaseProductName database product name.
+     * @return true if DB is PostgreSQL, false otherwise.
+     */
+    public static boolean isPostgreSQLDB(String databaseProductName) {
+
+        return POSTGRE_SQL.equalsIgnoreCase(databaseProductName);
     }
 
     /**
@@ -262,6 +328,17 @@ public class JdbcUtils {
     }
 
     /**
+     * Check if the DB is Informix for the given database product name.
+     *
+     * @param databaseProductName database product name.
+     * @return true if DB is Informix, false otherwise.
+     */
+    public static boolean isInformixDB(String databaseProductName) {
+
+        return INFORMIX.equalsIgnoreCase(databaseProductName);
+    }
+
+    /**
      * Check if the DB is Oracle. Identity database is used.
      *
      * @return true if DB is Oracle, false otherwise.
@@ -282,6 +359,17 @@ public class JdbcUtils {
     public static boolean isOracleDB(Database database) throws DataAccessException {
 
         return isDBTypeOf(ORACLE, database);
+    }
+
+    /**
+     * Check if the DB is Oracle for the given database product name.
+     *
+     * @param databaseProductName database product name.
+     * @return true if DB is Oracle, false otherwise.
+     */
+    public static boolean isOracleDB(String databaseProductName) {
+
+        return ORACLE.equalsIgnoreCase(databaseProductName);
     }
 
     /**

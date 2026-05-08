@@ -258,7 +258,7 @@ public class WorkflowDAO {
         List<Workflow> workflowList = new ArrayList<>();
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             String filterResolvedForSQL = resolveSQLFilter(filter);
-            sqlQuery = getSqlQuery();
+            sqlQuery = getSqlQuery(connection);
             try (PreparedStatement prepStmt = generatePrepStmt(connection, sqlQuery, tenantId, filterResolvedForSQL,
                     offset, limit);) {
                 try (ResultSet resultSet = prepStmt.executeQuery()) {
@@ -323,7 +323,7 @@ public class WorkflowDAO {
         } catch (SQLException e) {
             throw new InternalWorkflowException(errorMessage, e);
         } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+            IdentityDatabaseUtil.closeAllConnections(connection, rs, prepStmt);
         }
         return workflowList;
     }
@@ -485,7 +485,7 @@ public class WorkflowDAO {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new InternalWorkflowException(errorMessage, e);
         } finally {
-            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+            IdentityDatabaseUtil.closeAllConnections(connection, rs, prepStmt);
         }
         return parameterList;
     }
@@ -495,20 +495,21 @@ public class WorkflowDAO {
      * @throws InternalWorkflowException
      * @throws DataAccessException
      */
-    private String getSqlQuery() throws InternalWorkflowException, DataAccessException {
+    private String getSqlQuery(Connection connection) throws InternalWorkflowException, SQLException {
 
+        String databaseProductName = connection.getMetaData().getDatabaseProductName();
         String sqlQuery;
-        if (JdbcUtils.isH2DB() || JdbcUtils.isMySQLDB() || JdbcUtils.isMariaDB()) {
+        if (JdbcUtils.isH2DB(databaseProductName) || JdbcUtils.isMySQLDB(databaseProductName) || JdbcUtils.isMariaDB(databaseProductName)) {
             sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_MYSQL;
-        } else if (JdbcUtils.isOracleDB()) {
+        } else if (JdbcUtils.isOracleDB(databaseProductName)) {
             sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_ORACLE;
-        } else if (JdbcUtils.isMSSqlDB()) {
+        } else if (JdbcUtils.isMSSqlDB(databaseProductName)) {
             sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_MSSQL;
-        } else if (JdbcUtils.isPostgreSQLDB()) {
+        } else if (JdbcUtils.isPostgreSQLDB(databaseProductName)) {
             sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_POSTGRESQL;
-        } else if (JdbcUtils.isDB2DB()) {
+        } else if (JdbcUtils.isDB2DB(databaseProductName)) {
             sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_DB2SQL;
-        } else if (JdbcUtils.isInformixDB()) {
+        } else if (JdbcUtils.isInformixDB(databaseProductName)) {
             sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_INFORMIX;
         } else {
             throw new InternalWorkflowException(WFConstant.Exceptions.ERROR_WHILE_LOADING_WORKFLOWS);
