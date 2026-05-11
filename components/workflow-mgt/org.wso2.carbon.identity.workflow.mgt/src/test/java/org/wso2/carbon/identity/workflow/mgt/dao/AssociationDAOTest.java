@@ -184,7 +184,8 @@ public class AssociationDAOTest {
 
     @Test(dataProvider = "invalidFilterParsingTestData")
     public void testListPaginatedAssociationsFilterParsingWithInvalidFilters(String filter, String description,
-                                                                             String expectedErrorMessage) {
+                                                                             String expectedErrorMessage)
+            throws SQLException {
 
         try (MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
              MockedStatic<JdbcUtils> jdbcUtils = mockStatic(JdbcUtils.class)) {
@@ -198,7 +199,7 @@ public class AssociationDAOTest {
             when(mockConnection.getMetaData()).thenReturn(mockDatabaseMetaData);
             when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn(mySqlDbName);
 
-            // Mock JdbcUtils to return MySQL database type.
+            // Mock JdbcUtils to return MySQL database type (simplest case).
             jdbcUtils.when(() -> JdbcUtils.isMySQLDB(mySqlDbName)).thenReturn(true);
             jdbcUtils.when(() -> JdbcUtils.isH2DB(mySqlDbName)).thenReturn(false);
             jdbcUtils.when(() -> JdbcUtils.isMariaDB(mySqlDbName)).thenReturn(false);
@@ -222,8 +223,6 @@ public class AssociationDAOTest {
                         "Exception message should match expected for filter: " + description);
             } catch (InternalWorkflowException e) {
                 fail("Unexpected InternalWorkflowException for filter: " + description);
-            } catch (SQLException e) {
-                fail("Unexpected SQLException for filter: " + description);
             }
         }
     }

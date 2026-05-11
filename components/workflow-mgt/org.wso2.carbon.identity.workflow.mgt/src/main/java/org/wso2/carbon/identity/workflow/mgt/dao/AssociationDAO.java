@@ -397,7 +397,8 @@ public class AssociationDAO {
         String databaseProductName = connection.getMetaData().getDatabaseProductName();
         String sqlQuery;
         if (filterField == null || SQLConstants.OPERATION_FILTER.equalsIgnoreCase(filterField)) {
-            if (JdbcUtils.isH2DB(databaseProductName) || JdbcUtils.isMySQLDB(databaseProductName) || JdbcUtils.isMariaDB(databaseProductName)) {
+            if (JdbcUtils.isH2DB(databaseProductName) || JdbcUtils.isMySQLDB(databaseProductName) ||
+                    JdbcUtils.isMariaDB(databaseProductName)) {
                 sqlQuery = SQLConstants.GET_ASSOCIATIONS_BY_TENANT_AND_ASSOC_NAME_MYSQL;
             } else if (JdbcUtils.isOracleDB(databaseProductName)) {
                 sqlQuery = SQLConstants.GET_ASSOCIATIONS_BY_TENANT_AND_ASSOC_NAME_ORACLE;
