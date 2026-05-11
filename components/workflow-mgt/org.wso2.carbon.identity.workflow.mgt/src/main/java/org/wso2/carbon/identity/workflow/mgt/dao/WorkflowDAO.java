@@ -499,7 +499,8 @@ public class WorkflowDAO {
 
         String databaseProductName = connection.getMetaData().getDatabaseProductName();
         String sqlQuery;
-        if (JdbcUtils.isH2DB(databaseProductName) || JdbcUtils.isMySQLDB(databaseProductName) || JdbcUtils.isMariaDB(databaseProductName)) {
+        if (JdbcUtils.isH2DB(databaseProductName) || JdbcUtils.isMySQLDB(databaseProductName) ||
+                JdbcUtils.isMariaDB(databaseProductName)) {
             sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_MYSQL;
         } else if (JdbcUtils.isOracleDB(databaseProductName)) {
             sqlQuery = SQLConstants.GET_WORKFLOWS_BY_TENANT_AND_WF_NAME_ORACLE;
