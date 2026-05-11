@@ -283,7 +283,8 @@ public class ApplicationDAOImpl extends AbstractApplicationDAOImpl implements Pa
         List<ServiceProviderProperty> idpProperties = new ArrayList<ServiceProviderProperty>();
         String databaseProductName = dbConnection.getMetaData().getDatabaseProductName();
         try {
-            prepStmt = isH2DB(databaseProductName) ? dbConnection.prepareStatement(ApplicationMgtDBQueries.GET_SP_METADATA_BY_SP_ID_H2) :
+            prepStmt = isH2DB(databaseProductName) ?
+                    dbConnection.prepareStatement(ApplicationMgtDBQueries.GET_SP_METADATA_BY_SP_ID_H2) :
                     dbConnection.prepareStatement(ApplicationMgtDBQueries.GET_SP_METADATA_BY_SP_ID);
             prepStmt.setInt(1, spId);
             rs = prepStmt.executeQuery();
@@ -318,7 +319,8 @@ public class ApplicationDAOImpl extends AbstractApplicationDAOImpl implements Pa
         PreparedStatement prepStmt = null;
         String databaseProductName = dbConnection.getMetaData().getDatabaseProductName();
         try {
-            prepStmt = isH2DB(databaseProductName) ? dbConnection.prepareStatement(ApplicationMgtDBQueries.ADD_SP_METADATA_H2) :
+            prepStmt = isH2DB(databaseProductName) ?
+                    dbConnection.prepareStatement(ApplicationMgtDBQueries.ADD_SP_METADATA_H2) :
                     dbConnection.prepareStatement(ApplicationMgtDBQueries.ADD_SP_METADATA);
             for (ServiceProviderProperty property : properties) {
                 if (StringUtils.isNotBlank(property.getValue())) {
