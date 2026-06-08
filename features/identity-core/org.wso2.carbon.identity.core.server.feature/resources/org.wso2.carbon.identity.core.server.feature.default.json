@@ -911,6 +911,7 @@
 
   "fido.webauthn.enable": true,
   "fido.enable_passkey_progressive_enrollment": false,
+  "fido.enable_passkey_username_case_normalization": false,
   "fido.enable_usernameless_authentication": true,
   "fido.trusted.origins": [],
   "fido.user_response_timeout": "300000",
