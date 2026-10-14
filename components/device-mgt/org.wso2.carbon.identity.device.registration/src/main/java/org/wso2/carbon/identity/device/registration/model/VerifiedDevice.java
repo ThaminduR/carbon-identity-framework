@@ -111,6 +111,7 @@ public class VerifiedDevice implements Serializable {
 
         return new Device.Builder()
                 .id(id)
+                .userId(userId)
                 .deviceName(deviceName)
                 .deviceModel(deviceModel)
                 .publicKey(publicKey)

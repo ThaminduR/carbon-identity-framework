@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.device.mgt.internal.constant.DeviceMgtSQLConstan
 import org.wso2.carbon.identity.device.mgt.internal.dao.DeviceManagementDAO;
 import org.wso2.carbon.identity.device.mgt.internal.util.DeviceManagementExceptionHandler;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
@@ -113,15 +114,7 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
             return jdbcTemplate.<Device, RuntimeException>withTransaction(
                     template -> template.fetchSingleRecord(
                             DeviceMgtSQLConstants.Query.GET_DEVICE_BY_ID,
-                            (resultSet, rowNumber) -> new Device.Builder()
-                                    .id(resultSet.getString(DeviceMgtSQLConstants.Column.ID))
-                                    .deviceName(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_NAME))
-                                    .deviceModel(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_MODEL))
-                                    .publicKey(resultSet.getString(DeviceMgtSQLConstants.Column.PUBLIC_KEY))
-                                    .status(Device.Status.valueOf(
-                                            resultSet.getString(DeviceMgtSQLConstants.Column.STATUS)))
-                                    .registeredAt(resultSet.getTimestamp(DeviceMgtSQLConstants.Column.REGISTERED_AT))
-                                    .build(),
+                            (resultSet, rowNumber) -> mapDevice(resultSet),
                             preparedStatement -> {
                                 preparedStatement.setString(DeviceMgtSQLConstants.Column.ID, deviceId);
                                 preparedStatement.setInt(DeviceMgtSQLConstants.Column.TENANT_ID, tenantId);
@@ -133,7 +126,18 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
         }
     }
 
+    private Device mapDevice(ResultSet resultSet) throws SQLException {
 
+        return new Device.Builder()
+                .id(resultSet.getString(DeviceMgtSQLConstants.Column.ID))
+                .userId(resultSet.getString(DeviceMgtSQLConstants.Column.USER_ID))
+                .deviceName(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_NAME))
+                .deviceModel(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_MODEL))
+                .publicKey(resultSet.getString(DeviceMgtSQLConstants.Column.PUBLIC_KEY))
+                .status(Device.Status.valueOf(resultSet.getString(DeviceMgtSQLConstants.Column.STATUS)))
+                .registeredAt(resultSet.getTimestamp(DeviceMgtSQLConstants.Column.REGISTERED_AT))
+                .build();
+    }
 
     @Override
     public List<Device> getDevices(int tenantId, int offset, int limit) throws DeviceMgtException {
@@ -165,15 +169,7 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
             List<Device> devices = jdbcTemplate.<List<Device>, RuntimeException>withTransaction(
                     template -> template.executeQuery(
                             query,
-                            (resultSet, rowNumber) -> new Device.Builder()
-                                    .id(resultSet.getString(DeviceMgtSQLConstants.Column.ID))
-                                    .deviceName(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_NAME))
-                                    .deviceModel(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_MODEL))
-                                    .publicKey(resultSet.getString(DeviceMgtSQLConstants.Column.PUBLIC_KEY))
-                                    .status(Device.Status.valueOf(
-                                            resultSet.getString(DeviceMgtSQLConstants.Column.STATUS)))
-                                    .registeredAt(resultSet.getTimestamp(DeviceMgtSQLConstants.Column.REGISTERED_AT))
-                                    .build(),
+                            (resultSet, rowNumber) -> mapDevice(resultSet),
                             preparedStatement -> {
                                 preparedStatement.setInt(DeviceMgtSQLConstants.Column.TENANT_ID, tenantId);
                                 if (filterByUser) {

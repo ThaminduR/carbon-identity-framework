@@ -30,6 +30,7 @@ import org.mockito.MockedStatic;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
@@ -78,6 +79,7 @@ public class DeviceTokenExtractorTest {
     private static final String DEVICE_ID = "test-device-id";
     private static final String CORRELATION_ID = "test-correlation-id";
     private static final String JTI = "test-jti";
+    private static final String OWNER_ID = "test-owner-id";
 
     private DeviceTokenExtractor extractor;
     private MockedStatic<IdentityTenantUtil> mockedIdentityTenantUtil;
@@ -136,6 +138,46 @@ public class DeviceTokenExtractorTest {
         assertNotNull(result);
         assertEquals(result.get("platform"), "android");
         assertEquals(result.get("jti"), JTI);
+    }
+
+    @Test
+    public void testExtractFromTokenAddsRegisteredOwner() throws Exception {
+
+        Device device = registerDevice(DEVICE_ID, Device.Status.ACTIVE, base64PublicKey);
+        when(device.getUserId()).thenReturn(OWNER_ID);
+
+        Map<String, Object> result = extractor.extractFromToken(validToken, TENANT_DOMAIN);
+
+        assertEquals(result.get(FrameworkConstants.DEVICE_OWNER_ID), OWNER_ID);
+    }
+
+    @Test
+    public void testExtractFromTokenIgnoresClientSuppliedOwner() throws Exception {
+
+        Device device = registerDevice(DEVICE_ID, Device.Status.ACTIVE, base64PublicKey);
+        when(device.getUserId()).thenReturn(OWNER_ID);
+        String token = buildTokenWithClaims(keyPair, DEVICE_ID, new JWTClaimsSet.Builder()
+                .jwtID(JTI)
+                .issueTime(new Date())
+                .claim(FrameworkConstants.DEVICE_OWNER_ID, "spoofed-user-id"));
+
+        Map<String, Object> result = extractor.extractFromToken(token, TENANT_DOMAIN);
+
+        assertEquals(result.get(FrameworkConstants.DEVICE_OWNER_ID), OWNER_ID);
+    }
+
+    @Test
+    public void testExtractWithPublicKeyStripsClientSuppliedOwner() throws Exception {
+
+        String token = buildTokenWithClaims(keyPair, DEVICE_ID, new JWTClaimsSet.Builder()
+                .jwtID(JTI)
+                .issueTime(new Date())
+                .claim(FrameworkConstants.DEVICE_OWNER_ID, "spoofed-user-id"));
+
+        Map<String, Object> result =
+                extractor.extractWithPublicKey(token, base64PublicKey, CORRELATION_ID, TENANT_DOMAIN);
+
+        assertFalse(result.containsKey(FrameworkConstants.DEVICE_OWNER_ID));
     }
 
     @Test
@@ -479,12 +521,13 @@ public class DeviceTokenExtractorTest {
         }
     }
 
-    private void registerDevice(String deviceId, Device.Status status, String publicKey) throws DeviceMgtException {
+    private Device registerDevice(String deviceId, Device.Status status, String publicKey) throws DeviceMgtException {
 
         Device device = mock(Device.class);
         when(device.getStatus()).thenReturn(status);
         when(device.getPublicKey()).thenReturn(publicKey);
         when(deviceManagementServiceMock.getDeviceById(deviceId, TENANT_DOMAIN)).thenReturn(device);
+        return device;
     }
 
     private KeyPair generateKeyPair() throws Exception {

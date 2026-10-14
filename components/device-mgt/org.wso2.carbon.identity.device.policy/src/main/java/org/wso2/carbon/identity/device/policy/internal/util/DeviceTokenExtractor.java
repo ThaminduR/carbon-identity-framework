@@ -27,6 +27,7 @@ import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
 import org.wso2.carbon.identity.device.mgt.api.model.Device;
@@ -98,7 +99,11 @@ public class DeviceTokenExtractor {
             }
 
             ECPublicKey publicKey = decodePublicKey(device.getPublicKey());
-            return verifyAndExtract(signedJWT, publicKey, deviceId, tenantDomain);
+            Map<String, Object> deviceData = verifyAndExtract(signedJWT, publicKey, deviceId, tenantDomain);
+            if (StringUtils.isNotBlank(device.getUserId())) {
+                deviceData.put(FrameworkConstants.DEVICE_OWNER_ID, device.getUserId());
+            }
+            return deviceData;
 
         } catch (ParseException e) {
             diagnosticLogger.logTokenValidationFailure(null, "Device token could not be parsed.");
@@ -181,6 +186,8 @@ public class DeviceTokenExtractor {
                 deviceData.put(key, String.valueOf(value));
             }
         });
+        // The owner is resolved from the device registry, so a client-supplied claim must not be trusted.
+        deviceData.remove(FrameworkConstants.DEVICE_OWNER_ID);
 
         diagnosticLogger.logTokenValidationSuccess(correlationId);
         if (LOG.isDebugEnabled()) {

@@ -155,4 +155,61 @@ public interface DeviceManagementService {
      */
     void deleteDevicesByUserId(String userId, String tenantDomain)
             throws DeviceMgtException;
+
+    /**
+     * Retrieves a device by its UUID only if it is owned by the given user. Intended for self-service
+     * ("my devices") callers, which must never see another user's device.
+     *
+     * @param deviceId     UUID of the device.
+     * @param userId       Identifier of the user that must own the device.
+     * @param tenantDomain Tenant domain.
+     * @return The Device, or null if it does not exist or is owned by another user.
+     * @throws DeviceMgtException If the lookup fails.
+     */
+    Device getDeviceByIdForUser(String deviceId, String userId, String tenantDomain) throws DeviceMgtException;
+
+    /**
+     * Updates the display name of a device owned by the given user.
+     *
+     * @param deviceId     UUID of the device.
+     * @param userId       Identifier of the user that must own the device.
+     * @param deviceName   New name for the device.
+     * @param tenantDomain Tenant domain.
+     * @return The updated Device.
+     * @throws DeviceMgtException If the device does not exist, is owned by another user, or the update fails.
+     */
+    Device updateDeviceNameForUser(String deviceId, String userId, String deviceName, String tenantDomain)
+            throws DeviceMgtException;
+
+    /**
+     * Activates a device owned by the given user.
+     *
+     * @param deviceId     UUID of the device.
+     * @param userId       Identifier of the user that must own the device.
+     * @param tenantDomain Tenant domain.
+     * @return The updated Device.
+     * @throws DeviceMgtException If the device does not exist, is owned by another user, or the update fails.
+     */
+    Device activateDeviceForUser(String deviceId, String userId, String tenantDomain) throws DeviceMgtException;
+
+    /**
+     * Deactivates a device owned by the given user.
+     *
+     * @param deviceId     UUID of the device.
+     * @param userId       Identifier of the user that must own the device.
+     * @param tenantDomain Tenant domain.
+     * @return The updated Device.
+     * @throws DeviceMgtException If the device does not exist, is owned by another user, or the update fails.
+     */
+    Device deactivateDeviceForUser(String deviceId, String userId, String tenantDomain) throws DeviceMgtException;
+
+    /**
+     * Deletes (hard delete) a device owned by the given user.
+     *
+     * @param deviceId     UUID of the device.
+     * @param userId       Identifier of the user that must own the device.
+     * @param tenantDomain Tenant domain.
+     * @throws DeviceMgtException If the device does not exist, is owned by another user, or the deletion fails.
+     */
+    void deleteDeviceForUser(String deviceId, String userId, String tenantDomain) throws DeviceMgtException;
 }

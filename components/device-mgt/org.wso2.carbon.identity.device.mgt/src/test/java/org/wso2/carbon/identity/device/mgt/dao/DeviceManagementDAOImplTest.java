@@ -79,8 +79,10 @@ public class DeviceManagementDAOImplTest {
 
         Assert.assertNotNull(result);
         Assert.assertEquals(result.getId(), createdDeviceId);
+        Assert.assertEquals(result.getUserId(), TEST_USER_ID);
         List<Device> userDevices = deviceManagementDAO.getDevicesByUserId(TEST_USER_ID, TENANT_ID, 0, 100);
         Assert.assertTrue(userDevices.stream().anyMatch(d -> d.getId().equals(createdDeviceId)));
+        Assert.assertTrue(userDevices.stream().allMatch(d -> TEST_USER_ID.equals(d.getUserId())));
     }
 
     /**

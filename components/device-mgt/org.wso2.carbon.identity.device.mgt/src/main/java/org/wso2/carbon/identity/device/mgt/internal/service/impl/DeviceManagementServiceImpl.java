@@ -84,14 +84,15 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
         DEVICE_VALIDATOR.validateAssociation(association);
 
         String deviceId = device.getId();
+        UserDeviceAssociation userDeviceAssociation = (UserDeviceAssociation) association;
         Timestamp registeredAt = device.getRegisteredAt() != null
                 ? device.getRegisteredAt() : Timestamp.from(Instant.now());
         device = new Device.Builder(device)
                 .id(deviceId)
+                .userId(userDeviceAssociation.getUserId())
                 .registeredAt(registeredAt)
                 .build();
 
-        UserDeviceAssociation userDeviceAssociation = (UserDeviceAssociation) association;
         association = new UserDeviceAssociation(deviceId, userDeviceAssociation.getUserId());
 
         Device registeredDevice = deviceManagementDAO.registerDevice(
@@ -250,10 +251,76 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
         DEVICE_VALIDATOR.validateRequiredField(userId, FIELD_USER_ID);
         DEVICE_VALIDATOR.validateRequiredField(tenantDomain, FIELD_TENANT_DOMAIN);
 
-        deviceManagementDAO.deleteDevicesByUserId(userId, IdentityTenantUtil.getTenantId(tenantDomain));
+        List<Device> deletedDevices = deviceManagementDAO.deleteDevicesByUserId(
+                userId, IdentityTenantUtil.getTenantId(tenantDomain));
+        if (deletedDevices != null) {
+            for (Device deletedDevice : deletedDevices) {
+                AUDIT_LOGGER.printAuditLog(DeviceManagementAuditLogger.Operation.DELETE, deletedDevice, userId);
+            }
+        }
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("Devices deleted for user id: " + userId + LOG_IN_TENANT + tenantDomain);
+        }
+    }
+
+    @Override
+    public Device getDeviceByIdForUser(String deviceId, String userId, String tenantDomain)
+            throws DeviceMgtException {
+
+        DEVICE_VALIDATOR.validateRequiredField(userId, FIELD_USER_ID);
+        Device device = getDeviceById(deviceId, tenantDomain);
+        if (device == null || !userId.equals(device.getUserId())) {
+            return null;
+        }
+        return device;
+    }
+
+    @Override
+    public Device updateDeviceNameForUser(String deviceId, String userId, String deviceName, String tenantDomain)
+            throws DeviceMgtException {
+
+        validateDeviceOwnership(deviceId, userId, tenantDomain);
+        return updateDeviceName(deviceId, deviceName, tenantDomain);
+    }
+
+    @Override
+    public Device activateDeviceForUser(String deviceId, String userId, String tenantDomain)
+            throws DeviceMgtException {
+
+        validateDeviceOwnership(deviceId, userId, tenantDomain);
+        return activateDevice(deviceId, tenantDomain);
+    }
+
+    @Override
+    public Device deactivateDeviceForUser(String deviceId, String userId, String tenantDomain)
+            throws DeviceMgtException {
+
+        validateDeviceOwnership(deviceId, userId, tenantDomain);
+        return deactivateDevice(deviceId, tenantDomain);
+    }
+
+    @Override
+    public void deleteDeviceForUser(String deviceId, String userId, String tenantDomain) throws DeviceMgtException {
+
+        validateDeviceOwnership(deviceId, userId, tenantDomain);
+        deleteDevice(deviceId, tenantDomain);
+    }
+
+    /**
+     * Ensures the device exists and is owned by the given user. A device owned by another user is reported as
+     * not found so that self-service callers cannot probe for the existence of other users' devices.
+     */
+    private void validateDeviceOwnership(String deviceId, String userId, String tenantDomain)
+            throws DeviceMgtException {
+
+        Device device = getDeviceByIdForUser(deviceId, userId, tenantDomain);
+        if (device == null) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Device: " + deviceId + " is not found or not owned by user: " + userId +
+                        LOG_IN_TENANT + tenantDomain);
+            }
+            throw DeviceManagementExceptionHandler.handleClientException(ErrorMessage.ERROR_DEVICE_NOT_FOUND, deviceId);
         }
     }
 }

@@ -57,6 +57,8 @@ public class DeviceManagementServiceImplTest {
     private static final String TEST_USERNAME = "alice";
     private static final String TENANT_DOMAIN = "test.com";
     private static final int TENANT_ID = 1;
+    private static final String OWNER_ID = "owner-user-id";
+    private static final String OTHER_USER_ID = "other-user-id";
 
     private DeviceManagementServiceImpl service;
     private DeviceManagementDAO dao;
@@ -496,6 +498,156 @@ public class DeviceManagementServiceImplTest {
         } catch (DeviceMgtException ex) {
             Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
         }
+    }
+
+    @Test
+    public void testRegisterDeviceBindsOwnerToReturnedDevice() throws Exception {
+
+        Device device = buildDevice("d1");
+        UserDeviceAssociation association = new UserDeviceAssociation("d1", OWNER_ID);
+        when(dao.registerDevice(any(), any(), eq(TENANT_ID))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Device registered = service.registerDevice(device, association, TENANT_DOMAIN);
+
+        Assert.assertEquals(registered.getUserId(), OWNER_ID);
+    }
+
+    @Test
+    public void testGetDeviceByIdForUserReturnsOwnedDevice() throws Exception {
+
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(buildOwnedDevice("d1", OWNER_ID));
+
+        Device device = service.getDeviceByIdForUser("d1", OWNER_ID, TENANT_DOMAIN);
+
+        Assert.assertNotNull(device);
+        Assert.assertEquals(device.getUserId(), OWNER_ID);
+    }
+
+    @Test
+    public void testGetDeviceByIdForUserHidesDeviceOfAnotherUser() throws Exception {
+
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(buildOwnedDevice("d1", OWNER_ID));
+
+        Assert.assertNull(service.getDeviceByIdForUser("d1", OTHER_USER_ID, TENANT_DOMAIN));
+    }
+
+    @Test
+    public void testGetDeviceByIdForUserReturnsNullWhenMissing() throws Exception {
+
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(null);
+
+        Assert.assertNull(service.getDeviceByIdForUser("d1", OWNER_ID, TENANT_DOMAIN));
+    }
+
+    @Test
+    public void testGetDeviceByIdForUserWithBlankUserThrows() {
+
+        try {
+            service.getDeviceByIdForUser("d1", "", TENANT_DOMAIN);
+            Assert.fail("Expected DeviceMgtClientException");
+        } catch (DeviceMgtException ex) {
+            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
+        }
+    }
+
+    @Test
+    public void testUpdateDeviceNameForUserUpdatesOwnedDevice() throws Exception {
+
+        Device owned = buildOwnedDevice("d1", OWNER_ID);
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(owned);
+        when(dao.updateDeviceName("d1", "Work phone", TENANT_ID)).thenReturn(owned);
+
+        service.updateDeviceNameForUser("d1", OWNER_ID, "Work phone", TENANT_DOMAIN);
+
+        verify(dao).updateDeviceName("d1", "Work phone", TENANT_ID);
+    }
+
+    @Test
+    public void testUpdateDeviceNameForUserRejectsDeviceOfAnotherUser() throws Exception {
+
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(buildOwnedDevice("d1", OWNER_ID));
+
+        assertDeviceNotFound(() -> service.updateDeviceNameForUser("d1", OTHER_USER_ID, "Mine", TENANT_DOMAIN));
+        verify(dao, never()).updateDeviceName(anyString(), anyString(), anyInt());
+    }
+
+    @Test
+    public void testActivateDeviceForUserRejectsDeviceOfAnotherUser() throws Exception {
+
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(buildOwnedDevice("d1", OWNER_ID));
+
+        assertDeviceNotFound(() -> service.activateDeviceForUser("d1", OTHER_USER_ID, TENANT_DOMAIN));
+        verify(dao, never()).changeDeviceStatus(anyString(), any(), anyInt());
+    }
+
+    @Test
+    public void testDeactivateDeviceForUserChangesStatusOfOwnedDevice() throws Exception {
+
+        Device owned = buildOwnedDevice("d1", OWNER_ID);
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(owned);
+        when(dao.changeDeviceStatus("d1", Device.Status.INACTIVE, TENANT_ID)).thenReturn(owned);
+
+        service.deactivateDeviceForUser("d1", OWNER_ID, TENANT_DOMAIN);
+
+        verify(dao).changeDeviceStatus("d1", Device.Status.INACTIVE, TENANT_ID);
+    }
+
+    @Test
+    public void testDeactivateDeviceForUserRejectsDeviceOfAnotherUser() throws Exception {
+
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(buildOwnedDevice("d1", OWNER_ID));
+
+        assertDeviceNotFound(() -> service.deactivateDeviceForUser("d1", OTHER_USER_ID, TENANT_DOMAIN));
+        verify(dao, never()).changeDeviceStatus(anyString(), any(), anyInt());
+    }
+
+    @Test
+    public void testDeleteDeviceForUserDeletesOwnedDevice() throws Exception {
+
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(buildOwnedDevice("d1", OWNER_ID));
+
+        service.deleteDeviceForUser("d1", OWNER_ID, TENANT_DOMAIN);
+
+        verify(dao).deleteDevice("d1", TENANT_ID);
+    }
+
+    @Test
+    public void testDeleteDeviceForUserRejectsDeviceOfAnotherUser() throws Exception {
+
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(buildOwnedDevice("d1", OWNER_ID));
+
+        assertDeviceNotFound(() -> service.deleteDeviceForUser("d1", OTHER_USER_ID, TENANT_DOMAIN));
+        verify(dao, never()).deleteDevice(anyString(), anyInt());
+    }
+
+    @Test
+    public void testDeleteDeviceForUserWhenMissingThrowsNotFound() throws Exception {
+
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(null);
+
+        assertDeviceNotFound(() -> service.deleteDeviceForUser("d1", OWNER_ID, TENANT_DOMAIN));
+        verify(dao, never()).deleteDevice(anyString(), anyInt());
+    }
+
+    private static void assertDeviceNotFound(DeviceOperation operation) {
+
+        try {
+            operation.run();
+            Assert.fail("Expected DeviceMgtClientException");
+        } catch (DeviceMgtException ex) {
+            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_DEVICE_NOT_FOUND.getCode());
+        }
+    }
+
+    @FunctionalInterface
+    private interface DeviceOperation {
+
+        void run() throws DeviceMgtException;
+    }
+
+    private static Device buildOwnedDevice(String id, String userId) {
+
+        return new Device.Builder(buildDevice(id)).userId(userId).build();
     }
 
     private static Device buildDevice(String id) {

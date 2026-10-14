@@ -271,6 +271,9 @@ public abstract class FrameworkConstants {
     public static final String REMOVE_COMMONAUTH_COOKIE = "removeCommonAuthCookie";
     public static final String INITIAL_CONTEXT = "initialContext";
     public static final String DEVICE_DATA = "deviceData";
+    // Key in the device data map holding the user id of the registered owner of the device that signed
+    // the device token. Set by the server after the token is verified; never taken from token claims.
+    public static final String DEVICE_OWNER_ID = "deviceOwnerId";
     // Transport of the device token resolved by the registered DeviceDataResolver implementation.
     public static final String DEVICE_TOKEN_PARAM = "device_token";
     public static final String DEVICE_TOKEN_HEADER = "X-Device-Token";
