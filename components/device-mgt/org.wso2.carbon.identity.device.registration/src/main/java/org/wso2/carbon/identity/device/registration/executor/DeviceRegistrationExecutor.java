@@ -38,14 +38,17 @@ import org.wso2.carbon.identity.flow.execution.engine.exception.FlowEngineExcept
 import org.wso2.carbon.identity.flow.execution.engine.graph.Executor;
 import org.wso2.carbon.identity.flow.execution.engine.model.ExecutorResponse;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
+import org.wso2.carbon.identity.flow.mgt.Constants.FlowTypes;
 import org.wso2.carbon.identity.flow.mgt.model.NodeConfig;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
@@ -103,6 +106,13 @@ public class DeviceRegistrationExecutor implements Executor {
     public List<String> getInitiationData() {
 
         return Collections.singletonList(USERNAME_CLAIM_URI);
+    }
+
+    @Override
+    public Set<FlowTypes> getSupportedFlowTypes() {
+
+        // Devices are bound to the user onboarded by the flow when it completes.
+        return EnumSet.of(FlowTypes.REGISTRATION, FlowTypes.INVITED_USER_REGISTRATION);
     }
 
     private ExecutorResponse initiateRegistration(FlowExecutionContext context) {

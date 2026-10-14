@@ -54,6 +54,7 @@ import org.wso2.carbon.identity.flow.mgt.model.NodeConfig;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -173,6 +174,13 @@ public class DeviceRegistrationExecutorTest {
     public void testGetNameReturnsExecutorName() {
 
         assertEquals(executor.getName(), DeviceRegistrationConstants.EXECUTOR_NAME);
+    }
+
+    @Test
+    public void testSupportedFlowTypesAreUserOnboardingFlows() {
+
+        assertEquals(executor.getSupportedFlowTypes(),
+                EnumSet.of(FlowTypes.REGISTRATION, FlowTypes.INVITED_USER_REGISTRATION));
     }
 
     @Test
