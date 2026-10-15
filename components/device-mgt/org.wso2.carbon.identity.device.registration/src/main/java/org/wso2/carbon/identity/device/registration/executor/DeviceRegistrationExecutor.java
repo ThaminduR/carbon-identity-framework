@@ -111,8 +111,9 @@ public class DeviceRegistrationExecutor implements Executor {
     @Override
     public Set<FlowTypes> getSupportedFlowTypes() {
 
-        // Devices are bound to the user onboarded by the flow when it completes.
-        return EnumSet.of(FlowTypes.REGISTRATION, FlowTypes.INVITED_USER_REGISTRATION);
+        // Devices are bound to the flow user when the flow completes: the user onboarded by a registration flow, or
+        // the existing user in a dedicated device registration flow.
+        return EnumSet.of(FlowTypes.REGISTRATION, FlowTypes.INVITED_USER_REGISTRATION, FlowTypes.DEVICE_REGISTRATION);
     }
 
     private ExecutorResponse initiateRegistration(FlowExecutionContext context) {

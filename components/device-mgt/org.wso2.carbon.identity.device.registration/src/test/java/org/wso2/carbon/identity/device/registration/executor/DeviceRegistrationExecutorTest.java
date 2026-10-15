@@ -177,10 +177,10 @@ public class DeviceRegistrationExecutorTest {
     }
 
     @Test
-    public void testSupportedFlowTypesAreUserOnboardingFlows() {
+    public void testSupportedFlowTypes() {
 
-        assertEquals(executor.getSupportedFlowTypes(),
-                EnumSet.of(FlowTypes.REGISTRATION, FlowTypes.INVITED_USER_REGISTRATION));
+        assertEquals(executor.getSupportedFlowTypes(), EnumSet.of(FlowTypes.REGISTRATION,
+                FlowTypes.INVITED_USER_REGISTRATION, FlowTypes.DEVICE_REGISTRATION));
     }
 
     @Test
